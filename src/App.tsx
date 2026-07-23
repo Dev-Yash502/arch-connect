@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { ScrollAnimationHero } from './components/ScrollAnimationHero';
 
@@ -11,8 +11,11 @@ import { ProfessionalDetailModal } from './components/ProfessionalDetailModal';
 import { AuthModal } from './components/AuthModal';
 import { Footer } from './components/Footer';
 
-import { INITIAL_PROFESSIONALS, MOCK_ACTIVE_PROJECT, MOCK_PROPOSALS } from './data/mockData';
-import { Professional, CostEstimateInput } from './types';
+import { ProfessionalPortal } from './components/ProfessionalPortal';
+import { ClientPortal } from './components/ClientPortal';
+
+import { INITIAL_PROFESSIONALS, MOCK_ACTIVE_PROJECT, MOCK_PROPOSALS, MOCK_REQUIREMENTS } from './data/mockData';
+import { Professional, CostEstimateInput, ProjectRequirement } from './types';
 
 import {
   Compass,
@@ -72,8 +75,44 @@ function SocialBtn({ href, icon: Icon, bgColor, textColor }: SocialBtnProps) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
-  const [professionals, setProfessionals] = useState<Professional[]>(INITIAL_PROFESSIONALS);
+  const [professionals, setProfessionals] = useState<Professional[]>(() => {
+    try {
+      const saved = localStorage.getItem('arch_connect_professionals');
+      return saved ? JSON.parse(saved) : INITIAL_PROFESSIONALS;
+    } catch {
+      return INITIAL_PROFESSIONALS;
+    }
+  });
+
+  const [requirements, setRequirements] = useState<ProjectRequirement[]>(() => {
+    try {
+      const saved = localStorage.getItem('arch_connect_requirements');
+      return saved ? JSON.parse(saved) : MOCK_REQUIREMENTS;
+    } catch {
+      return MOCK_REQUIREMENTS;
+    }
+  });
+
   const [proposals, setProposals] = useState(MOCK_PROPOSALS);
+
+  const handleSaveProfessional = (updatedProf: Professional) => {
+    setProfessionals((prev) => {
+      const exists = prev.some((p) => p.id === updatedProf.id);
+      const newList = exists
+        ? prev.map((p) => (p.id === updatedProf.id ? updatedProf : p))
+        : [updatedProf, ...prev];
+      localStorage.setItem('arch_connect_professionals', JSON.stringify(newList));
+      return newList;
+    });
+  };
+
+  const handleAddRequirement = (newReq: ProjectRequirement) => {
+    setRequirements((prev) => {
+      const newList = [newReq, ...prev];
+      localStorage.setItem('arch_connect_requirements', JSON.stringify(newList));
+      return newList;
+    });
+  };
 
   // Modals state
   const [isCostEstimatorOpen, setIsCostEstimatorOpen] = useState(false);
@@ -393,15 +432,31 @@ export default function App() {
     <div className="min-h-screen bg-[#FDF8F0] text-[#2C1F14] font-sans antialiased flex flex-col justify-between selection:bg-[#4A3728] selection:text-white">
       {/* Navigation Header */}
       <Header
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onOpenPostRequirement={() => setIsPostReqOpen(true)}
-        onOpenCostEstimator={() => setIsCostEstimatorOpen(true)}
-        onOpenAuth={() => setIsAuthOpen(true)}
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      onOpenPostRequirement={() => setIsPostReqOpen(true)}
+      onOpenCostEstimator={() => setIsCostEstimatorOpen(true)}
+      onOpenAuth={() => setIsAuthOpen(true)}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 pt-20">
+        {activeTab === 'prof-portal' ? (
+          <ProfessionalPortal
+            professionals={professionals}
+            onSaveProfessional={handleSaveProfessional}
+            onSelectViewDirectory={() => setActiveTab('professionals')}
+          />
+        ) : activeTab === 'client-portal' ? (
+          <ClientPortal
+            requirements={requirements}
+            onAddRequirement={handleAddRequirement}
+            onOpenCostEstimator={() => setIsCostEstimatorOpen(true)}
+            onOpenProposalMatrix={() => setIsProposalMatrixOpen(true)}
+            onBrowseProfessionals={() => setActiveTab('professionals')}
+          />
+        ) : (
+          <>
         {/* HERO SECTION */}
         <section className="relative pt-12 sm:pt-16 pb-20 overflow-hidden bg-gradient-to-b from-amber-50/40 via-[#FDF8F0] to-[#FDF8F0]">
           {/* Subtle Grid Background Pattern */}
@@ -707,6 +762,8 @@ export default function App() {
           }}
           selectedCategoryFilter={categoryFilterForDir}
         />
+          </>
+        )}
       </main>
 
       {/* FOOTER */}

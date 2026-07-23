@@ -1,5 +1,5 @@
-﻿import React, { useState } from 'react';
-import { X, Star, MapPin, Award, CheckCircle2, Phone, Mail, Building, Briefcase, Calendar, MessageSquare } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Star, MapPin, Award, CheckCircle2, Phone, Mail, Building, Briefcase, Calendar, MessageSquare, ShieldCheck } from 'lucide-react';
 import { Professional } from '../types';
 
 interface ProfessionalDetailModalProps {
@@ -174,14 +174,13 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
 
         {/* Footer Actions */}
         <div className="p-4 sm:p-6 bg-slate-100 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-slate-600 flex items-center space-x-4">
-            <span className="flex items-center space-x-1">
-              <Phone className="w-3.5 h-3.5 text-[#4A3728]" />
-              <span className="font-semibold text-slate-900">{professional.phone}</span>
+          <div className="text-xs text-slate-600 flex flex-wrap items-center gap-3">
+            <span className="flex items-center space-x-1.5 px-3 py-1 bg-amber-900/10 text-amber-900 rounded-full font-semibold border border-amber-800/20">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#9B7B5A]" />
+              <span>Contact Details Protected</span>
             </span>
-            <span className="flex items-center space-x-1">
-              <Mail className="w-3.5 h-3.5 text-[#4A3728]" />
-              <span className="font-semibold text-slate-900">{professional.email}</span>
+            <span className="text-slate-500 font-medium hidden sm:inline">
+              Inquire securely via Arch-Connect Platform
             </span>
           </div>
 

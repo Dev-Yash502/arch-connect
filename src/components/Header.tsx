@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Menu, X, PlusCircle, Calculator, Building2, ShieldCheck } from 'lucide-react';
 
 interface HeaderProps {
@@ -20,11 +20,12 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navItems = [
     { id: 'home', label: 'Home' },
+    { id: 'prof-portal', label: 'Professional Hub' },
+    { id: 'client-portal', label: 'Client Portal' },
     { id: 'services', label: 'Services' },
     { id: 'how-it-works', label: 'How it Works' },
     { id: 'professionals', label: 'Professionals' },
     { id: 'estimator', label: 'Cost Estimator' },
-    { id: 'projects', label: 'Live Projects' },
     { id: 'contact', label: 'Contact Us' },
   ];
 
