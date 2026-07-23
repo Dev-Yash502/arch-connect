@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, Star, MapPin, Award, CheckCircle2, Phone, Mail, Building, Briefcase, Calendar, MessageSquare } from 'lucide-react';
 import { Professional } from '../types';
 
@@ -21,9 +21,9 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-3xl bg-[#f9f9f7] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <div className="relative w-full max-w-3xl bg-[#FDF8F0] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
         {/* Header Hero Cover */}
-        <div className="relative bg-gradient-to-r from-[#003629] to-[#1b4d3e] text-white p-6 sm:p-8 pt-8">
+        <div className="relative bg-gradient-to-r from-[#4A3728] to-[#6B5040] text-white p-6 sm:p-8 pt-8">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-full transition-colors"
@@ -39,7 +39,7 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
             />
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] uppercase font-extrabold tracking-widest bg-[#ecc246] text-[#003629] px-2.5 py-0.5 rounded-full">
+                <span className="text-[10px] uppercase font-extrabold tracking-widest bg-[#C4A882] text-[#4A3728] px-2.5 py-0.5 rounded-full">
                   {professional.role}
                 </span>
                 {professional.badge && (
@@ -61,11 +61,11 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
                   <span>({professional.reviewCount} reviews)</span>
                 </span>
                 <span className="flex items-center space-x-1">
-                  <MapPin className="w-3.5 h-3.5 text-[#ecc246]" />
+                  <MapPin className="w-3.5 h-3.5 text-[#C4A882]" />
                   <span>{professional.location}</span>
                 </span>
                 <span className="flex items-center space-x-1">
-                  <Briefcase className="w-3.5 h-3.5 text-[#ecc246]" />
+                  <Briefcase className="w-3.5 h-3.5 text-[#C4A882]" />
                   <span>{professional.experienceYears} Years Exp.</span>
                 </span>
               </div>
@@ -79,7 +79,7 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
             onClick={() => setActiveTab('overview')}
             className={`py-3.5 px-4 font-bold text-sm border-b-2 transition-colors ${
               activeTab === 'overview'
-                ? 'border-[#003629] text-[#003629]'
+                ? 'border-[#4A3728] text-[#4A3728]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -89,7 +89,7 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
             onClick={() => setActiveTab('portfolio')}
             className={`py-3.5 px-4 font-bold text-sm border-b-2 transition-colors ${
               activeTab === 'portfolio'
-                ? 'border-[#003629] text-[#003629]'
+                ? 'border-[#4A3728] text-[#4A3728]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -103,7 +103,7 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
             <>
               {/* Bio */}
               <div>
-                <h3 className="font-display font-bold text-base text-[#003629] mb-2">About & Philosophy</h3>
+                <h3 className="font-display font-bold text-base text-[#4A3728] mb-2">About & Philosophy</h3>
                 <p className="text-sm text-slate-700 leading-relaxed bg-white p-4 rounded-2xl border border-slate-200">
                   {professional.bio}
                 </p>
@@ -113,34 +113,34 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 text-center">
                   <span className="text-xs text-slate-500 block uppercase font-bold">Base Rate</span>
-                  <span className="font-display font-extrabold text-xl text-[#003629]">
+                  <span className="font-display font-extrabold text-xl text-[#4A3728]">
                     ₹{professional.pricePerSqFt} <span className="text-xs font-normal text-slate-500">/sq ft</span>
                   </span>
                 </div>
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 text-center">
                   <span className="text-xs text-slate-500 block uppercase font-bold">Completed</span>
-                  <span className="font-display font-extrabold text-xl text-[#003629]">
+                  <span className="font-display font-extrabold text-xl text-[#4A3728]">
                     {professional.completedProjectsCount}+ <span className="text-xs font-normal text-slate-500">Projects</span>
                   </span>
                 </div>
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 text-center">
                   <span className="text-xs text-slate-500 block uppercase font-bold">Client Satisfaction</span>
-                  <span className="font-display font-extrabold text-xl text-emerald-700">99.4%</span>
+                  <span className="font-display font-extrabold text-xl text-amber-900">99.4%</span>
                 </div>
               </div>
 
               {/* Specialties */}
               <div>
-                <h3 className="font-display font-bold text-base text-[#003629] mb-2.5">
+                <h3 className="font-display font-bold text-base text-[#4A3728] mb-2.5">
                   Core Architectural Competencies
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {professional.specialties.map((spec, i) => (
                     <span
                       key={i}
-                      className="px-3.5 py-1.5 bg-[#003629]/5 text-[#003629] font-semibold text-xs rounded-full border border-[#003629]/15 flex items-center space-x-1.5"
+                      className="px-3.5 py-1.5 bg-[#4A3728]/5 text-[#4A3728] font-semibold text-xs rounded-full border border-[#4A3728]/15 flex items-center space-x-1.5"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#755b00]" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#9B7B5A]" />
                       <span>{spec}</span>
                     </span>
                   ))}
@@ -157,10 +157,10 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
                 >
                   <img src={item.image} alt={item.title} className="w-full h-44 object-cover" />
                   <div className="p-4 space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#755b00]">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#9B7B5A]">
                       {item.category}
                     </span>
-                    <h4 className="font-display font-bold text-sm text-[#003629]">{item.title}</h4>
+                    <h4 className="font-display font-bold text-sm text-[#4A3728]">{item.title}</h4>
                     <p className="text-xs text-slate-600 line-clamp-2">{item.description}</p>
                     {item.location && (
                       <span className="text-[11px] text-slate-400 block pt-1">{item.location} • {item.areaSqFt} sq.ft</span>
@@ -176,11 +176,11 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
         <div className="p-4 sm:p-6 bg-slate-100 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-slate-600 flex items-center space-x-4">
             <span className="flex items-center space-x-1">
-              <Phone className="w-3.5 h-3.5 text-[#003629]" />
+              <Phone className="w-3.5 h-3.5 text-[#4A3728]" />
               <span className="font-semibold text-slate-900">{professional.phone}</span>
             </span>
             <span className="flex items-center space-x-1">
-              <Mail className="w-3.5 h-3.5 text-[#003629]" />
+              <Mail className="w-3.5 h-3.5 text-[#4A3728]" />
               <span className="font-semibold text-slate-900">{professional.email}</span>
             </span>
           </div>
@@ -190,7 +190,7 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
               onRequestQuote(professional);
               onClose();
             }}
-            className="w-full sm:w-auto px-7 py-3 bg-[#755b00] hover:bg-[#584400] text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2"
+            className="w-full sm:w-auto px-7 py-3 bg-[#9B7B5A] hover:bg-[#7A5C45] text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2"
           >
             <MessageSquare className="w-4 h-4 text-amber-200" />
             <span>Request Direct Proposal</span>

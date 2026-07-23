@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { ScrollAnimationHero } from './components/ScrollAnimationHero';
 
@@ -390,7 +390,7 @@ export default function App() {
   // ORIGINAL MARKETPLACE RENDERING
   // ------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-[#f9f9f7] text-[#1a1c1b] font-sans antialiased flex flex-col justify-between selection:bg-[#003629] selection:text-white">
+    <div className="min-h-screen bg-[#FDF8F0] text-[#2C1F14] font-sans antialiased flex flex-col justify-between selection:bg-[#4A3728] selection:text-white">
       {/* Navigation Header */}
       <Header
         activeTab={activeTab}
@@ -403,21 +403,21 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 pt-20">
         {/* HERO SECTION */}
-        <section className="relative pt-12 sm:pt-16 pb-20 overflow-hidden bg-gradient-to-b from-emerald-50/40 via-[#f9f9f7] to-[#f9f9f7]">
+        <section className="relative pt-12 sm:pt-16 pb-20 overflow-hidden bg-gradient-to-b from-amber-50/40 via-[#FDF8F0] to-[#FDF8F0]">
           {/* Subtle Grid Background Pattern */}
-          <div className="absolute inset-0 opacity-30 pointer-events-none bg-[radial-gradient(#003629_1px,transparent_1px)] [background-size:24px_24px]" />
+          <div className="absolute inset-0 opacity-30 pointer-events-none bg-[radial-gradient(#4A3728_1px,transparent_1px)] [background-size:24px_24px]" />
 
           <div className="max-w-7xl mx-auto px-4 sm:px-8 relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             {/* Hero Left Content */}
             <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#003629]/5 border border-[#003629]/15 text-[#003629] text-xs font-bold tracking-wide">
-                <Sparkles className="w-3.5 h-3.5 text-[#755b00]" />
+              <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#4A3728]/5 border border-[#4A3728]/15 text-[#4A3728] text-xs font-bold tracking-wide">
+                <Sparkles className="w-3.5 h-3.5 text-[#9B7B5A]" />
                 <span>Verified Architectural Marketplace</span>
               </div>
 
-              <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-extrabold text-[#003629] tracking-tight leading-[1.12]">
+              <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-extrabold text-[#4A3728] tracking-tight leading-[1.12]">
                 Your Dream Space,<br />
-                <span className="text-[#755b00]">Built with Trust</span>
+                <span className="text-[#9B7B5A]">Built with Trust</span>
               </h1>
 
               <p className="text-sm sm:text-base lg:text-lg text-slate-600 max-w-lg mx-auto lg:mx-0 leading-relaxed">
@@ -427,7 +427,7 @@ export default function App() {
               <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 pt-2 px-2 sm:px-0">
                 <button
                   onClick={() => setIsPostReqOpen(true)}
-                  className="bg-[#755b00] hover:bg-[#584400] text-white font-bold text-sm px-8 py-3.5 sm:py-4 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 w-full sm:w-auto cursor-pointer"
+                  className="bg-[#9B7B5A] hover:bg-[#7A5C45] text-white font-bold text-sm px-8 py-3.5 sm:py-4 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 w-full sm:w-auto cursor-pointer"
                 >
                   <span>Get Started</span>
                   <ArrowRight className="w-4 h-4 text-amber-200" />
@@ -435,7 +435,7 @@ export default function App() {
 
                 <button
                   onClick={() => handleCategoryExplore('All')}
-                  className="border-2 border-[#003629] text-[#003629] hover:bg-[#003629]/5 font-bold text-sm px-8 py-3.5 sm:py-4 rounded-full transition-all text-center w-full sm:w-auto cursor-pointer"
+                  className="border-2 border-[#4A3728] text-[#4A3728] hover:bg-[#4A3728]/5 font-bold text-sm px-8 py-3.5 sm:py-4 rounded-full transition-all text-center w-full sm:w-auto cursor-pointer"
                 >
                   Browse Professionals
                 </button>
@@ -459,13 +459,13 @@ export default function App() {
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuCI3bGY4Y_Hhv8bdTjN0koXT-LVa0C5mb4kKoZ6954epVRXTZRVLAtuE3ti18XLzWGzEcBHr5864HgYhfOPUdN2-E41SIg7HvWXhJpPyIomc7l-TCms_TIAyI3EDqrqV0i4QVkcBXnKs7A9a1Lk79703rinW218Ar84VwSxOflJwaKgwsicKGApKvHF5FdqbOjfAZz4s1fVBJNK-7KLe9K1jEcZn3SjEFGAxC41C0vf-6c_3cZ-5pk"
                     alt="Civil Engineer Avatar"
                   />
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-xs font-bold text-[#003629]">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-xs font-bold text-[#4A3728]">
                     +1k
                   </div>
                 </div>
 
                 <div className="text-xs sm:text-sm text-slate-600">
-                  <strong className="font-bold text-[#003629]">Trusted by</strong> thousands of homeowners
+                  <strong className="font-bold text-[#4A3728]">Trusted by</strong> thousands of homeowners
                 </div>
               </div>
             </div>
@@ -476,7 +476,7 @@ export default function App() {
                 <img
                   src="/logo.jpg"
                   alt="Arch-Connect Logo"
-                  className="w-full max-w-[280px] sm:max-w-md lg:max-w-xl h-auto rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl object-contain border border-[#003629]/10 transition-transform duration-300 hover:scale-[1.02] lg:translate-x-24"
+                  className="w-full max-w-[280px] sm:max-w-md lg:max-w-xl h-auto rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl object-contain border border-[#4A3728]/10 transition-transform duration-300 hover:scale-[1.02] lg:translate-x-24"
                 />
               </div>
             </div>
@@ -490,7 +490,7 @@ export default function App() {
         <section id="services" className="py-20 bg-white border-y border-slate-200/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-12">
             <div className="text-center max-w-2xl mx-auto space-y-3">
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#003629]">
+              <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#4A3728]">
                 Our Services
               </h2>
               <p className="text-slate-600 text-base">
@@ -500,12 +500,12 @@ export default function App() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Card 1: Architects */}
-              <div className="bg-[#f9f9f7] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
+              <div className="bg-[#FDF8F0] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
                 <div>
-                  <div className="w-14 h-14 bg-[#baeed9] rounded-2xl flex items-center justify-center text-[#003629] mb-6 shadow-2xs">
+                  <div className="w-14 h-14 bg-[#F0E6D3] rounded-2xl flex items-center justify-center text-[#4A3728] mb-6 shadow-2xs">
                     <Compass className="w-7 h-7" />
                   </div>
-                  <h3 className="font-display font-bold text-xl text-[#003629] mb-2.5">
+                  <h3 className="font-display font-bold text-xl text-[#4A3728] mb-2.5">
                     Architects
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
@@ -515,20 +515,20 @@ export default function App() {
 
                 <button
                   onClick={() => handleCategoryExplore('Architects')}
-                  className="text-[#003629] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#755b00] transition-colors cursor-pointer"
+                  className="text-[#4A3728] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#9B7B5A] transition-colors cursor-pointer"
                 >
                   <span>Explore</span>
-                  <ArrowRight className="w-4 h-4 text-[#755b00] group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-4 h-4 text-[#9B7B5A] group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
 
               {/* Card 2: Interior Designers */}
-              <div className="bg-[#f9f9f7] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
+              <div className="bg-[#FDF8F0] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
                 <div>
-                  <div className="w-14 h-14 bg-[#ffe08e] rounded-2xl flex items-center justify-center text-[#755b00] mb-6 shadow-2xs">
+                  <div className="w-14 h-14 bg-[#EDE3D3] rounded-2xl flex items-center justify-center text-[#9B7B5A] mb-6 shadow-2xs">
                     <Armchair className="w-7 h-7" />
                   </div>
-                  <h3 className="font-display font-bold text-xl text-[#003629] mb-2.5">
+                  <h3 className="font-display font-bold text-xl text-[#4A3728] mb-2.5">
                     Interior Designers
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
@@ -538,20 +538,20 @@ export default function App() {
 
                 <button
                   onClick={() => handleCategoryExplore('Interior Designers')}
-                  className="text-[#003629] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#755b00] transition-colors cursor-pointer"
+                  className="text-[#4A3728] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#9B7B5A] transition-colors cursor-pointer"
                 >
                   <span>Explore</span>
-                  <ArrowRight className="w-4 h-4 text-[#755b00] group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-4 h-4 text-[#9B7B5A] group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
 
               {/* Card 3: Civil Engineers */}
-              <div className="bg-[#f9f9f7] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
+              <div className="bg-[#FDF8F0] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
                 <div>
-                  <div className="w-14 h-14 bg-[#dde4e6] rounded-2xl flex items-center justify-center text-[#293032] mb-6 shadow-2xs">
+                  <div className="w-14 h-14 bg-[#E8DDD0] rounded-2xl flex items-center justify-center text-[#4A3020] mb-6 shadow-2xs">
                     <Wrench className="w-7 h-7" />
                   </div>
-                  <h3 className="font-display font-bold text-xl text-[#003629] mb-2.5">
+                  <h3 className="font-display font-bold text-xl text-[#4A3728] mb-2.5">
                     Civil Engineers
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
@@ -561,20 +561,20 @@ export default function App() {
 
                 <button
                   onClick={() => handleCategoryExplore('Civil Engineers')}
-                  className="text-[#003629] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#755b00] transition-colors cursor-pointer"
+                  className="text-[#4A3728] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#9B7B5A] transition-colors cursor-pointer"
                 >
                   <span>Explore</span>
-                  <ArrowRight className="w-4 h-4 text-[#755b00] group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-4 h-4 text-[#9B7B5A] group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
 
               {/* Card 4: Material Providers */}
-              <div className="bg-[#f9f9f7] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
+              <div className="bg-[#FDF8F0] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
                 <div>
-                  <div className="w-14 h-14 bg-[#e2e3e1] rounded-2xl flex items-center justify-center text-slate-800 mb-6 shadow-2xs">
+                  <div className="w-14 h-14 bg-[#EDE3D8] rounded-2xl flex items-center justify-center text-slate-800 mb-6 shadow-2xs">
                     <Package className="w-7 h-7" />
                   </div>
-                  <h3 className="font-display font-bold text-xl text-[#003629] mb-2.5">
+                  <h3 className="font-display font-bold text-xl text-[#4A3728] mb-2.5">
                     Material Providers
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
@@ -584,10 +584,10 @@ export default function App() {
 
                 <button
                   onClick={() => handleCategoryExplore('Material Providers')}
-                  className="text-[#003629] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#755b00] transition-colors cursor-pointer"
+                  className="text-[#4A3728] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#9B7B5A] transition-colors cursor-pointer"
                 >
                   <span>Explore</span>
-                  <ArrowRight className="w-4 h-4 text-[#755b00] group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-4 h-4 text-[#9B7B5A] group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
             </div>
@@ -595,9 +595,9 @@ export default function App() {
         </section>
 
         {/* HOW IT WORKS SECTION */}
-        <section id="how-it-works" className="py-20 bg-[#f9f9f7]">
+        <section id="how-it-works" className="py-20 bg-[#FDF8F0]">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-16">
-            <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#003629] text-center">
+            <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#4A3728] text-center">
               How It Works
             </h2>
 
@@ -610,10 +610,10 @@ export default function App() {
                 onClick={() => setIsPostReqOpen(true)}
                 className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
               >
-                <div className="w-24 h-24 rounded-full bg-white border-4 border-[#f9f9f7] shadow-lg flex items-center justify-center text-[#003629] mb-5 group-hover:scale-110 transition-transform">
-                  <FileEdit className="w-10 h-10 text-[#003629]" />
+                <div className="w-24 h-24 rounded-full bg-white border-4 border-[#FDF8F0] shadow-lg flex items-center justify-center text-[#4A3728] mb-5 group-hover:scale-110 transition-transform">
+                  <FileEdit className="w-10 h-10 text-[#4A3728]" />
                 </div>
-                <h4 className="font-display font-bold text-lg text-[#003629] mb-1.5 group-hover:text-[#755b00]">
+                <h4 className="font-display font-bold text-lg text-[#4A3728] mb-1.5 group-hover:text-[#9B7B5A]">
                   1. Post Requirement
                 </h4>
                 <p className="text-xs text-slate-600 max-w-xs">
@@ -626,10 +626,10 @@ export default function App() {
                 onClick={() => handleCategoryExplore('All')}
                 className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
               >
-                <div className="w-24 h-24 rounded-full bg-white border-4 border-[#f9f9f7] shadow-lg flex items-center justify-center text-[#003629] mb-5 group-hover:scale-110 transition-transform">
-                  <UserPlus className="w-10 h-10 text-[#003629]" />
+                <div className="w-24 h-24 rounded-full bg-white border-4 border-[#FDF8F0] shadow-lg flex items-center justify-center text-[#4A3728] mb-5 group-hover:scale-110 transition-transform">
+                  <UserPlus className="w-10 h-10 text-[#4A3728]" />
                 </div>
-                <h4 className="font-display font-bold text-lg text-[#003629] mb-1.5 group-hover:text-[#755b00]">
+                <h4 className="font-display font-bold text-lg text-[#4A3728] mb-1.5 group-hover:text-[#9B7B5A]">
                   2. Get Matched
                 </h4>
                 <p className="text-xs text-slate-600 max-w-xs">
@@ -642,10 +642,10 @@ export default function App() {
                 onClick={() => setIsProposalMatrixOpen(true)}
                 className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
               >
-                <div className="w-24 h-24 rounded-full bg-white border-4 border-[#f9f9f7] shadow-lg flex items-center justify-center text-[#003629] mb-5 group-hover:scale-110 transition-transform">
-                  <ArrowRightLeft className="w-10 h-10 text-[#003629]" />
+                <div className="w-24 h-24 rounded-full bg-white border-4 border-[#FDF8F0] shadow-lg flex items-center justify-center text-[#4A3728] mb-5 group-hover:scale-110 transition-transform">
+                  <ArrowRightLeft className="w-10 h-10 text-[#4A3728]" />
                 </div>
-                <h4 className="font-display font-bold text-lg text-[#003629] mb-1.5 group-hover:text-[#755b00]">
+                <h4 className="font-display font-bold text-lg text-[#4A3728] mb-1.5 group-hover:text-[#9B7B5A]">
                   3. Compare Proposals
                 </h4>
                 <p className="text-xs text-slate-600 max-w-xs">
@@ -658,10 +658,10 @@ export default function App() {
                 onClick={() => setIsProjectDetailsOpen(true)}
                 className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
               >
-                <div className="w-24 h-24 rounded-full bg-[#755b00] border-4 border-[#f9f9f7] shadow-lg flex items-center justify-center text-white mb-5 group-hover:scale-110 transition-transform">
+                <div className="w-24 h-24 rounded-full bg-[#9B7B5A] border-4 border-[#FDF8F0] shadow-lg flex items-center justify-center text-white mb-5 group-hover:scale-110 transition-transform">
                   <Handshake className="w-10 h-10 text-white" />
                 </div>
-                <h4 className="font-display font-bold text-lg text-[#003629] mb-1.5 group-hover:text-[#755b00]">
+                <h4 className="font-display font-bold text-lg text-[#4A3728] mb-1.5 group-hover:text-[#9B7B5A]">
                   4. Book & Build
                 </h4>
                 <p className="text-xs text-slate-600 max-w-xs">
@@ -673,10 +673,10 @@ export default function App() {
         </section>
 
         {/* INTERACTIVE COST ESTIMATOR PROMO BANNER */}
-        <section className="py-12 bg-gradient-to-r from-[#003629] via-[#1b4d3e] to-[#003629] text-white">
+        <section className="py-12 bg-gradient-to-r from-[#4A3728] via-[#6B5040] to-[#4A3728] text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#ecc246]">
+              <span className="text-xs font-bold uppercase tracking-widest text-[#C4A882]">
                 Instant Architectural Budget Tool
               </span>
               <h3 className="font-display font-extrabold text-2xl sm:text-3xl text-white">
@@ -689,7 +689,7 @@ export default function App() {
 
             <button
               onClick={() => setIsCostEstimatorOpen(true)}
-              className="bg-[#ecc246] hover:bg-[#d9b036] text-[#003629] font-extrabold text-sm px-8 py-4 rounded-full shadow-lg transition-all flex items-center space-x-2 flex-shrink-0 cursor-pointer"
+              className="bg-[#C4A882] hover:bg-[#B89468] text-[#4A3728] font-extrabold text-sm px-8 py-4 rounded-full shadow-lg transition-all flex items-center space-x-2 flex-shrink-0 cursor-pointer"
             >
               <Calculator className="w-5 h-5" />
               <span>Launch Cost Estimator</span>

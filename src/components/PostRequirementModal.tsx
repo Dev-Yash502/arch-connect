@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, Send, CheckCircle2, Sparkles, Building2, ShieldCheck, MapPin, Calendar } from 'lucide-react';
 import { ProjectRequirement, ProfessionalCategory } from '../types';
 
@@ -50,12 +50,12 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-[#f9f9f7] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <div className="relative w-full max-w-2xl bg-[#FDF8F0] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 sm:px-8 py-5 bg-[#003629] text-white">
+        <div className="flex items-center justify-between px-6 sm:px-8 py-5 bg-[#4A3728] text-white">
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-white/10 rounded-xl">
-              <Building2 className="w-6 h-6 text-[#ecc246]" />
+              <Building2 className="w-6 h-6 text-[#C4A882]" />
             </div>
             <div>
               <h2 className="font-display font-bold text-xl text-white">
@@ -77,10 +77,10 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
         {/* Content Body */}
         {submitted ? (
           <div className="p-12 text-center space-y-4">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <div className="w-16 h-16 bg-amber-100 text-amber-900 rounded-full flex items-center justify-center mx-auto shadow-inner">
               <CheckCircle2 className="w-10 h-10" />
             </div>
-            <h3 className="font-display font-extrabold text-2xl text-[#003629]">
+            <h3 className="font-display font-extrabold text-2xl text-[#4A3728]">
               Requirement Posted Successfully!
             </h3>
             <p className="text-slate-600 text-sm max-w-md mx-auto">
@@ -99,7 +99,7 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#003629] focus:outline-none focus:ring-2 focus:ring-[#003629]"
+                className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 placeholder="e.g. 3-Story Luxury Residence Construction"
               />
             </div>
@@ -113,7 +113,7 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#003629] focus:outline-none focus:ring-2 focus:ring-[#003629]"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 >
                   <option value="Architects">Architects (Elevation & Blueprints)</option>
                   <option value="Interior Designers">Interior Designers (Turnkey Fitout)</option>
@@ -132,7 +132,7 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                   required
                   value={formData.builtUpAreaSqFt}
                   onChange={(e) => setFormData({ ...formData, builtUpAreaSqFt: Number(e.target.value) })}
-                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#003629] focus:outline-none focus:ring-2 focus:ring-[#003629]"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 />
               </div>
             </div>
@@ -150,7 +150,7 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                     required
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full pl-9 pr-3 py-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#003629] focus:outline-none focus:ring-2 focus:ring-[#003629]"
+                    className="w-full pl-9 pr-3 py-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                     placeholder="City (e.g. Delhi, Dehradun, Roorkee)"
                   />
                 </div>
@@ -165,7 +165,7 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                   required
                   value={formData.budgetRange}
                   onChange={(e) => setFormData({ ...formData, budgetRange: e.target.value })}
-                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#003629] focus:outline-none focus:ring-2 focus:ring-[#003629]"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                   placeholder="e.g. ₹40 Lakhs - ₹70 Lakhs"
                 />
               </div>
@@ -180,7 +180,7 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                 <select
                   value={formData.architecturalStyle}
                   onChange={(e) => setFormData({ ...formData, architecturalStyle: e.target.value })}
-                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#003629] focus:outline-none focus:ring-2 focus:ring-[#003629]"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 >
                   <option value="Modern Contemporary">Modern Contemporary (Estate Style)</option>
                   <option value="Minimalist Glasshaus">Minimalist Glasshaus</option>
@@ -197,7 +197,7 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                 <select
                   value={formData.preferredTimeline}
                   onChange={(e) => setFormData({ ...formData, preferredTimeline: e.target.value })}
-                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#003629] focus:outline-none focus:ring-2 focus:ring-[#003629]"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 >
                   <option value="3 - 6 Months">3 - 6 Months</option>
                   <option value="6 - 9 Months">6 - 9 Months</option>
@@ -216,15 +216,15 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                 rows={3}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm text-[#003629] focus:outline-none focus:ring-2 focus:ring-[#003629]"
+                className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 placeholder="Mention specific desires e.g. slate stone tiles, gold louver screens, low-E glazing..."
               />
             </div>
 
             {/* Security Guarantee Badge */}
             <div className="flex items-center space-x-3 bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200/80">
-              <ShieldCheck className="w-5 h-5 text-[#003629] flex-shrink-0" />
-              <p className="text-xs text-[#003629]">
+              <ShieldCheck className="w-5 h-5 text-[#4A3728] flex-shrink-0" />
+              <p className="text-xs text-[#4A3728]">
                 <strong className="font-bold">Arch-Connect Verified Shield:</strong> Only background-checked, licensed professionals will view your requirements and offer quotes.
               </p>
             </div>
@@ -240,9 +240,9 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-7 py-3 bg-[#003629] hover:bg-[#1b4d3e] text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
+                className="px-7 py-3 bg-[#4A3728] hover:bg-[#6B5040] text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
               >
-                <Send className="w-4 h-4 text-[#ecc246]" />
+                <Send className="w-4 h-4 text-[#C4A882]" />
                 <span>Submit & Get Matches</span>
               </button>
             </div>

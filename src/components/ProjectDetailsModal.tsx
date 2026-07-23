@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { X, CheckCircle2, Clock, Calendar, ShieldCheck, DollarSign, Image as ImageIcon, MapPin, User, FileCheck } from 'lucide-react';
 import { ActiveProject } from '../types';
 
@@ -13,24 +13,24 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ isOpen
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-[#f9f9f7] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <div className="relative w-full max-w-4xl bg-[#FDF8F0] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 sm:px-8 py-5 bg-[#003629] text-white">
+        <div className="flex items-center justify-between px-6 sm:px-8 py-5 bg-[#4A3728] text-white">
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-white/10 rounded-xl">
-              <FileCheck className="w-6 h-6 text-[#ecc246]" />
+              <FileCheck className="w-6 h-6 text-[#C4A882]" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="font-display font-bold text-xl sm:text-2xl text-white">
                   {project.name}
                 </h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-[#ecc246] text-[#003629] px-2.5 py-0.5 rounded-full">
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-[#C4A882] text-[#4A3728] px-2.5 py-0.5 rounded-full">
                   75% Complete
                 </span>
               </div>
               <p className="text-xs text-slate-300 flex items-center space-x-1 mt-0.5">
-                <MapPin className="w-3.5 h-3.5 text-[#ecc246]" />
+                <MapPin className="w-3.5 h-3.5 text-[#C4A882]" />
                 <span>{project.location} • Client: {project.clientName}</span>
               </p>
             </div>
@@ -49,11 +49,11 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ isOpen
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
             <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-slate-600">
               <span>Overall Site Completion</span>
-              <span className="text-base text-[#003629]">{project.overallProgress}%</span>
+              <span className="text-base text-[#4A3728]">{project.overallProgress}%</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-[#003629] via-emerald-600 to-[#755b00] h-full rounded-full transition-all duration-1000"
+                className="bg-gradient-to-r from-[#4A3728] via-emerald-600 to-[#9B7B5A] h-full rounded-full transition-all duration-1000"
                 style={{ width: `${project.overallProgress}%` }}
               />
             </div>
@@ -66,36 +66,36 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ isOpen
 
           {/* Project Team Cards */}
           <div>
-            <h3 className="font-display font-bold text-base text-[#003629] mb-3">
+            <h3 className="font-display font-bold text-base text-[#4A3728] mb-3">
               Assigned Professional Guild
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Lead Architect</span>
-                <span className="font-bold text-[#003629] text-sm block mt-0.5">{project.leadArchitect}</span>
-                <span className="text-[11px] text-emerald-700 font-medium">Atelier Verma</span>
+                <span className="font-bold text-[#4A3728] text-sm block mt-0.5">{project.leadArchitect}</span>
+                <span className="text-[11px] text-amber-900 font-medium">Atelier Verma</span>
               </div>
               <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Civil Engineer</span>
-                <span className="font-bold text-[#003629] text-sm block mt-0.5">{project.leadEngineer}</span>
-                <span className="text-[11px] text-emerald-700 font-medium">Malhotra Dynamics</span>
+                <span className="font-bold text-[#4A3728] text-sm block mt-0.5">{project.leadEngineer}</span>
+                <span className="text-[11px] text-amber-900 font-medium">Malhotra Dynamics</span>
               </div>
               <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Interior Designer</span>
-                <span className="font-bold text-[#003629] text-sm block mt-0.5">{project.interiorDesigner}</span>
-                <span className="text-[11px] text-emerald-700 font-medium">Kapoor Interiors</span>
+                <span className="font-bold text-[#4A3728] text-sm block mt-0.5">{project.interiorDesigner}</span>
+                <span className="text-[11px] text-amber-900 font-medium">Kapoor Interiors</span>
               </div>
               <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Material Supplier</span>
-                <span className="font-bold text-[#003629] text-sm block mt-0.5">{project.materialSupplier}</span>
-                <span className="text-[11px] text-emerald-700 font-medium">Apex Materials</span>
+                <span className="font-bold text-[#4A3728] text-sm block mt-0.5">{project.materialSupplier}</span>
+                <span className="text-[11px] text-amber-900 font-medium">Apex Materials</span>
               </div>
             </div>
           </div>
 
           {/* Milestone Schedule */}
           <div>
-            <h3 className="font-display font-bold text-base text-[#003629] mb-3">
+            <h3 className="font-display font-bold text-base text-[#4A3728] mb-3">
               Construction Milestones & Audit Log
             </h3>
             <div className="space-y-3">
@@ -113,7 +113,7 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ isOpen
                       <div className="w-5 h-5 rounded-full border-2 border-slate-300 flex-shrink-0 mt-0.5" />
                     )}
                     <div>
-                      <h4 className="font-bold text-sm text-[#003629]">{m.title}</h4>
+                      <h4 className="font-bold text-sm text-[#4A3728]">{m.title}</h4>
                       <p className="text-xs text-slate-500 mt-0.5">{m.notes}</p>
                     </div>
                   </div>
@@ -122,7 +122,7 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ isOpen
                     <span
                       className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full inline-block ${
                         m.status === 'Completed'
-                          ? 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-amber-100 text-emerald-800'
                           : m.status === 'In Progress'
                           ? 'bg-amber-100 text-amber-800'
                           : 'bg-slate-100 text-slate-600'
@@ -139,7 +139,7 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({ isOpen
 
           {/* Site Progress Photos */}
           <div>
-            <h3 className="font-display font-bold text-base text-[#003629] mb-3">
+            <h3 className="font-display font-bold text-base text-[#4A3728] mb-3">
               On-Site Photo Verification
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

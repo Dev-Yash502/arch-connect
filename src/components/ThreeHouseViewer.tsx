@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Play, Pause, Sun, Moon, Sparkles, Layers, RotateCw, Eye } from 'lucide-react';
 
@@ -366,7 +366,7 @@ export const ThreeHouseViewer: React.FC<ThreeHouseViewerProps> = ({ onViewDetail
           <button
             onClick={() => setTimeOfDay('day')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all flex items-center space-x-1 ${
-              timeOfDay === 'day' ? 'bg-[#003629] text-white shadow' : 'text-slate-600 hover:text-slate-900'
+              timeOfDay === 'day' ? 'bg-[#4A3728] text-white shadow' : 'text-slate-600 hover:text-slate-900'
             }`}
             title="Sun Daylight Mode"
           >
@@ -376,7 +376,7 @@ export const ThreeHouseViewer: React.FC<ThreeHouseViewerProps> = ({ onViewDetail
           <button
             onClick={() => setTimeOfDay('sunset')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all flex items-center space-x-1 ${
-              timeOfDay === 'sunset' ? 'bg-[#755b00] text-white shadow' : 'text-slate-600 hover:text-slate-900'
+              timeOfDay === 'sunset' ? 'bg-[#9B7B5A] text-white shadow' : 'text-slate-600 hover:text-slate-900'
             }`}
             title="Golden Hour Sunset Mode"
           >
@@ -402,7 +402,7 @@ export const ThreeHouseViewer: React.FC<ThreeHouseViewerProps> = ({ onViewDetail
             className="p-2 bg-white/80 backdrop-blur-md hover:bg-white text-slate-700 rounded-full border border-white/60 shadow-md transition-all"
             title={isRotating ? 'Pause 3D Orbit' : 'Play 3D Orbit'}
           >
-            {isRotating ? <Pause className="w-4 h-4 text-[#003629]" /> : <Play className="w-4 h-4 text-[#003629]" />}
+            {isRotating ? <Pause className="w-4 h-4 text-[#4A3728]" /> : <Play className="w-4 h-4 text-[#4A3728]" />}
           </button>
 
           {/* Color Palettes Dropdown / Buttons */}
@@ -411,7 +411,7 @@ export const ThreeHouseViewer: React.FC<ThreeHouseViewerProps> = ({ onViewDetail
             <button
               onClick={() => setColorScheme('estate')}
               className={`w-5 h-5 rounded-full border-2 transition-transform ${
-                colorScheme === 'estate' ? 'scale-110 border-[#003629] shadow-sm' : 'border-transparent'
+                colorScheme === 'estate' ? 'scale-110 border-[#4A3728] shadow-sm' : 'border-transparent'
               }`}
               style={{ background: 'linear-gradient(135deg, #c9a227 50%, #4a5568 50%)' }}
               title="Estate Slate & Gold"
@@ -419,15 +419,15 @@ export const ThreeHouseViewer: React.FC<ThreeHouseViewerProps> = ({ onViewDetail
             <button
               onClick={() => setColorScheme('emerald')}
               className={`w-5 h-5 rounded-full border-2 transition-transform ${
-                colorScheme === 'emerald' ? 'scale-110 border-[#003629] shadow-sm' : 'border-transparent'
+                colorScheme === 'emerald' ? 'scale-110 border-[#4A3728] shadow-sm' : 'border-transparent'
               }`}
-              style={{ background: 'linear-gradient(135deg, #003629 50%, #dfb12e 50%)' }}
+              style={{ background: 'linear-gradient(135deg, #4A3728 50%, #dfb12e 50%)' }}
               title="Emerald & Brass"
             />
             <button
               onClick={() => setColorScheme('teak')}
               className={`w-5 h-5 rounded-full border-2 transition-transform ${
-                colorScheme === 'teak' ? 'scale-110 border-[#003629] shadow-sm' : 'border-transparent'
+                colorScheme === 'teak' ? 'scale-110 border-[#4A3728] shadow-sm' : 'border-transparent'
               }`}
               style={{ background: 'linear-gradient(135deg, #3e2723 50%, #d7ccc8 50%)' }}
               title="Deep Teak & Sand"
@@ -435,7 +435,7 @@ export const ThreeHouseViewer: React.FC<ThreeHouseViewerProps> = ({ onViewDetail
             <button
               onClick={() => setColorScheme('minimal')}
               className={`w-5 h-5 rounded-full border-2 transition-transform ${
-                colorScheme === 'minimal' ? 'scale-110 border-[#003629] shadow-sm' : 'border-transparent'
+                colorScheme === 'minimal' ? 'scale-110 border-[#4A3728] shadow-sm' : 'border-transparent'
               }`}
               style={{ background: 'linear-gradient(135deg, #212121 50%, #ffffff 50%)' }}
               title="Monochrome Minimal"
@@ -447,11 +447,11 @@ export const ThreeHouseViewer: React.FC<ThreeHouseViewerProps> = ({ onViewDetail
       {/* Floating Glass Overlay Card matching original specification */}
       <div className="absolute bottom-6 left-6 right-6 glass-panel rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 soft-shadow z-20">
         <div className="flex items-center space-x-3.5">
-          <div className="bg-[#003629]/10 p-3 rounded-xl text-[#003629] flex-shrink-0">
-            <Layers className="w-5 h-5 text-[#003629]" />
+          <div className="bg-[#4A3728]/10 p-3 rounded-xl text-[#4A3728] flex-shrink-0">
+            <Layers className="w-5 h-5 text-[#4A3728]" />
           </div>
           <div>
-            <p className="font-bold text-sm text-[#003629] m-0 tracking-tight">Modern Villa Residence</p>
+            <p className="font-bold text-sm text-[#4A3728] m-0 tracking-tight">Modern Villa Residence</p>
             <div className="flex items-center space-x-2 text-xs text-slate-600 mt-0.5">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>3-Story Superstructure • 75% Complete</span>
@@ -461,10 +461,10 @@ export const ThreeHouseViewer: React.FC<ThreeHouseViewerProps> = ({ onViewDetail
 
         <button
           onClick={onViewDetails}
-          className="text-[#755b00] font-semibold text-xs sm:text-sm hover:text-[#584400] hover:underline flex items-center space-x-1 group self-end sm:self-center transition-colors"
+          className="text-[#9B7B5A] font-semibold text-xs sm:text-sm hover:text-[#7A5C45] hover:underline flex items-center space-x-1 group self-end sm:self-center transition-colors"
         >
           <span>View Details</span>
-          <Eye className="w-4 h-4 text-[#755b00] group-hover:translate-x-0.5 transition-transform" />
+          <Eye className="w-4 h-4 text-[#9B7B5A] group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+﻿import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 const FRAME_COUNT = 240;
 const pad = (n: number) => String(n).padStart(3, '0');
@@ -222,9 +222,9 @@ export const ScrollAnimationHero: React.FC<ScrollAnimationHeroProps> = ({ onScro
           >
             {/* Spinner ring */}
             <div className="relative w-20 h-20">
-              <div className="absolute inset-0 rounded-full border-4 border-[#003629]/30" />
+              <div className="absolute inset-0 rounded-full border-4 border-[#4A3728]/30" />
               <div
-                className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#ecc246]"
+                className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#C4A882]"
                 style={{ animation: 'spin 1s linear infinite' }}
               />
               {/* Percentage in center */}
@@ -232,7 +232,7 @@ export const ScrollAnimationHero: React.FC<ScrollAnimationHeroProps> = ({ onScro
                 {loadPercent}%
               </span>
             </div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#ecc246]/80">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#C4A882]/80">
               Loading Experience
             </p>
           </div>
@@ -263,15 +263,15 @@ export const ScrollAnimationHero: React.FC<ScrollAnimationHeroProps> = ({ onScro
           style={{ opacity: Math.max(0, 1 - scrollProgress * 3), transition: 'opacity 0.1s' }}
         >
           {/* Top Badge */}
-          <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-[#ecc246]/50 bg-[#003629]/80 backdrop-blur-md text-[#ecc246] text-xs font-bold uppercase tracking-[0.2em] shadow-xl mb-3">
-            <span className="w-2 h-2 rounded-full bg-[#ecc246] animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-[#C4A882]/50 bg-[#4A3728]/80 backdrop-blur-md text-[#C4A882] text-xs font-bold uppercase tracking-[0.2em] shadow-xl mb-3">
+            <span className="w-2 h-2 rounded-full bg-[#C4A882] animate-pulse" />
             Architectural Craftsmanship
           </div>
 
           {/* Main Title */}
           <h2 className="font-display font-extrabold text-3xl sm:text-6xl lg:text-8xl text-white leading-[1.08] tracking-tight mb-2 drop-shadow-[0_6px_24px_rgba(0,0,0,0.85)] px-2">
             Watch Your Vision<br />
-            <span className="bg-gradient-to-r from-[#fed255] via-[#ecc246] to-[#ffffff] bg-clip-text text-transparent drop-shadow-[0_6px_20px_rgba(0,0,0,0.9)]">
+            <span className="bg-gradient-to-r from-[#D4BC99] via-[#C4A882] to-[#ffffff] bg-clip-text text-transparent drop-shadow-[0_6px_20px_rgba(0,0,0,0.9)]">
               Come to Life
             </span>
           </h2>
@@ -283,18 +283,18 @@ export const ScrollAnimationHero: React.FC<ScrollAnimationHeroProps> = ({ onScro
           style={{ opacity: Math.max(0, 1 - scrollProgress * 3), transition: 'opacity 0.1s' }}
         >
           {/* Subtitle Card */}
-          <p className="text-white font-medium text-xs sm:text-base lg:text-xl max-w-xl leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] bg-[#003629]/40 backdrop-blur-md px-4 py-2 sm:px-6 sm:py-2.5 rounded-2xl sm:rounded-full border border-white/15 shadow-lg mb-4 mx-4">
+          <p className="text-white font-medium text-xs sm:text-base lg:text-xl max-w-xl leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] bg-[#4A3728]/40 backdrop-blur-md px-4 py-2 sm:px-6 sm:py-2.5 rounded-2xl sm:rounded-full border border-white/15 shadow-lg mb-4 mx-4">
             Scroll to experience our design-to-build process in motion.
           </p>
 
           {/* Scroll indicator */}
           <div className="flex flex-col items-center gap-2 animate-bounce">
             <div className="px-3.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/20 shadow-md">
-              <span className="text-[#ecc246] text-[11px] font-bold uppercase tracking-widest">Scroll</span>
+              <span className="text-[#C4A882] text-[11px] font-bold uppercase tracking-widest">Scroll</span>
             </div>
             <svg width="22" height="30" viewBox="0 0 20 28" fill="none" className="text-white drop-shadow-md">
               <rect x="1" y="1" width="18" height="26" rx="9" stroke="currentColor" strokeWidth="2"/>
-              <rect x="9" y="6" width="2" height="6" rx="1" fill="#ecc246"/>
+              <rect x="9" y="6" width="2" height="6" rx="1" fill="#C4A882"/>
             </svg>
           </div>
         </div>
@@ -308,12 +308,12 @@ export const ScrollAnimationHero: React.FC<ScrollAnimationHeroProps> = ({ onScro
         >
           <div className="glass-panel rounded-2xl px-8 py-5 flex items-center gap-5 soft-shadow">
             <div>
-              <p className="font-display font-bold text-base text-[#003629]">Ready to build?</p>
+              <p className="font-display font-bold text-base text-[#4A3728]">Ready to build?</p>
               <p className="text-xs text-slate-500 mt-0.5">Get matched with top professionals today.</p>
             </div>
             <button
               onClick={onScrollComplete}
-              className="bg-[#755b00] hover:bg-[#584400] text-white font-bold text-sm px-6 py-3 rounded-full shadow-lg transition-all whitespace-nowrap"
+              className="bg-[#9B7B5A] hover:bg-[#7A5C45] text-white font-bold text-sm px-6 py-3 rounded-full shadow-lg transition-all whitespace-nowrap"
             >
               Get Started →
             </button>

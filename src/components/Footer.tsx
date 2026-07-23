@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 interface FooterProps {
   onNavClick: (tab: string) => void;
@@ -6,7 +6,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
   return (
-    <footer className="bg-[#003629] text-white w-full py-16 border-t border-emerald-900">
+    <footer className="bg-[#4A3728] text-white w-full py-16 border-t border-emerald-900">
       <div className="max-w-7xl mx-auto px-6 sm:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Col 1: Brand Info */}
         <div className="md:col-span-1 space-y-3">
@@ -25,7 +25,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
 
         {/* Col 2: Platform */}
         <div className="flex flex-col space-y-2.5 text-sm">
-          <span className="font-bold text-[#ecc246] uppercase tracking-wider text-xs mb-1">
+          <span className="font-bold text-[#C4A882] uppercase tracking-wider text-xs mb-1">
             Platform
           </span>
           <button onClick={() => onNavClick('professionals')} className="text-slate-300 hover:text-white text-left transition-colors">
@@ -41,7 +41,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
 
         {/* Col 3: Company */}
         <div className="flex flex-col space-y-2.5 text-sm">
-          <span className="font-bold text-[#ecc246] uppercase tracking-wider text-xs mb-1">
+          <span className="font-bold text-[#C4A882] uppercase tracking-wider text-xs mb-1">
             Company
           </span>
           <a href="#" className="text-slate-300 hover:text-white transition-colors">About Us</a>
@@ -51,7 +51,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
 
         {/* Col 4: Legal */}
         <div className="flex flex-col space-y-2.5 text-sm">
-          <span className="font-bold text-[#ecc246] uppercase tracking-wider text-xs mb-1">
+          <span className="font-bold text-[#C4A882] uppercase tracking-wider text-xs mb-1">
             Legal
           </span>
           <a href="#" className="text-slate-300 hover:text-white transition-colors">Privacy Policy</a>
@@ -60,7 +60,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 mt-12 pt-8 border-t border-[#1b4d3e] text-center text-xs text-slate-400">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 mt-12 pt-8 border-t border-[#6B5040] text-center text-xs text-slate-400">
         <p>© 2026 Arch-Connect Marketplace. All rights reserved.</p>
       </div>
     </footer>

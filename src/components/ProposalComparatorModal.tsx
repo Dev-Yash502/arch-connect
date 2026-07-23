@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, Check, Star, ShieldCheck, Clock, Award, ArrowRight, FileText } from 'lucide-react';
 import { Proposal } from '../types';
 
@@ -26,12 +26,12 @@ export const ProposalComparatorModal: React.FC<ProposalComparatorModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-[#f9f9f7] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <div className="relative w-full max-w-4xl bg-[#FDF8F0] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 sm:px-8 py-5 bg-[#003629] text-white">
+        <div className="flex items-center justify-between px-6 sm:px-8 py-5 bg-[#4A3728] text-white">
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-white/10 rounded-xl">
-              <FileText className="w-6 h-6 text-[#ecc246]" />
+              <FileText className="w-6 h-6 text-[#C4A882]" />
             </div>
             <div>
               <h2 className="font-display font-bold text-xl sm:text-2xl text-white">
@@ -53,8 +53,8 @@ export const ProposalComparatorModal: React.FC<ProposalComparatorModalProps> = (
         {/* Content */}
         <div className="p-6 sm:p-8 space-y-6 max-h-[80vh] overflow-y-auto">
           {acceptedId && (
-            <div className="p-4 bg-emerald-100 border border-emerald-300 text-[#003629] rounded-2xl flex items-center space-x-3">
-              <ShieldCheck className="w-6 h-6 text-emerald-700 flex-shrink-0" />
+            <div className="p-4 bg-amber-100 border border-emerald-300 text-[#4A3728] rounded-2xl flex items-center space-x-3">
+              <ShieldCheck className="w-6 h-6 text-amber-900 flex-shrink-0" />
               <div>
                 <strong className="font-bold block">Proposal Accepted!</strong>
                 <p className="text-xs text-emerald-800">
@@ -72,7 +72,7 @@ export const ProposalComparatorModal: React.FC<ProposalComparatorModalProps> = (
                 <div
                   key={prop.id}
                   className={`bg-white rounded-2xl p-6 border shadow-sm flex flex-col justify-between transition-all ${
-                    isSelected ? 'border-2 border-[#755b00] ring-2 ring-[#755b00]/20 bg-amber-50/20' : 'border-slate-200 hover:border-slate-300'
+                    isSelected ? 'border-2 border-[#9B7B5A] ring-2 ring-[#9B7B5A]/20 bg-amber-50/20' : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <div className="space-y-4">
@@ -82,13 +82,13 @@ export const ProposalComparatorModal: React.FC<ProposalComparatorModalProps> = (
                         <img
                           src={prop.professionalAvatar}
                           alt={prop.professionalName}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-[#003629]"
+                          className="w-12 h-12 rounded-full object-cover border-2 border-[#4A3728]"
                         />
                         <div>
-                          <h3 className="font-display font-bold text-base text-[#003629]">
+                          <h3 className="font-display font-bold text-base text-[#4A3728]">
                             {prop.professionalName}
                           </h3>
-                          <span className="text-xs font-semibold text-[#755b00]">
+                          <span className="text-xs font-semibold text-[#9B7B5A]">
                             {prop.professionalRole}
                           </span>
                         </div>
@@ -101,12 +101,12 @@ export const ProposalComparatorModal: React.FC<ProposalComparatorModalProps> = (
                     </div>
 
                     {/* Price & Timeline */}
-                    <div className="bg-[#f9f9f7] p-4 rounded-xl border border-slate-200/80 flex justify-between items-center">
+                    <div className="bg-[#FDF8F0] p-4 rounded-xl border border-slate-200/80 flex justify-between items-center">
                       <div>
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
                           Total Estimate
                         </span>
-                        <span className="text-2xl font-display font-extrabold text-[#003629]">
+                        <span className="text-2xl font-display font-extrabold text-[#4A3728]">
                           ₹{prop.priceEstimateTotal.toLocaleString('en-IN')}
                         </span>
                       </div>
@@ -116,7 +116,7 @@ export const ProposalComparatorModal: React.FC<ProposalComparatorModalProps> = (
                           Duration
                         </span>
                         <span className="text-sm font-bold text-slate-800 flex items-center space-x-1">
-                          <Clock className="w-3.5 h-3.5 text-[#755b00]" />
+                          <Clock className="w-3.5 h-3.5 text-[#9B7B5A]" />
                           <span>{prop.timelineEstimateMonths} Months</span>
                         </span>
                       </div>
@@ -161,7 +161,7 @@ export const ProposalComparatorModal: React.FC<ProposalComparatorModalProps> = (
                       className={`w-full py-3 rounded-full font-bold text-sm transition-all flex items-center justify-center space-x-2 ${
                         isSelected
                           ? 'bg-emerald-700 text-white cursor-default'
-                          : 'bg-[#003629] hover:bg-[#1b4d3e] text-white shadow-md hover:shadow-lg'
+                          : 'bg-[#4A3728] hover:bg-[#6B5040] text-white shadow-md hover:shadow-lg'
                       }`}
                     >
                       {isSelected ? (
@@ -172,7 +172,7 @@ export const ProposalComparatorModal: React.FC<ProposalComparatorModalProps> = (
                       ) : (
                         <>
                           <span>Award Contract</span>
-                          <ArrowRight className="w-4 h-4 text-[#ecc246]" />
+                          <ArrowRight className="w-4 h-4 text-[#C4A882]" />
                         </>
                       )}
                     </button>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, Calculator, Check, ArrowRight, Building, Sparkles } from 'lucide-react';
 import { CostEstimateInput } from '../types';
 
@@ -59,12 +59,12 @@ export const CostEstimatorModal: React.FC<CostEstimatorModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-3xl bg-[#f9f9f7] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <div className="relative w-full max-w-3xl bg-[#FDF8F0] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 sm:px-8 py-5 bg-[#003629] text-white">
+        <div className="flex items-center justify-between px-6 sm:px-8 py-5 bg-[#4A3728] text-white">
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-white/10 rounded-xl">
-              <Calculator className="w-6 h-6 text-[#ecc246]" />
+              <Calculator className="w-6 h-6 text-[#C4A882]" />
             </div>
             <div>
               <h2 className="font-display font-bold text-xl sm:text-2xl text-white">
@@ -93,7 +93,7 @@ export const CostEstimatorModal: React.FC<CostEstimatorModalProps> = ({
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
                   Built-up Area (Sq. Ft)
                 </label>
-                <span className="font-display font-extrabold text-lg text-[#003629]">
+                <span className="font-display font-extrabold text-lg text-[#4A3728]">
                   {inputs.areaSqFt.toLocaleString('en-IN')} sq.ft
                 </span>
               </div>
@@ -104,7 +104,7 @@ export const CostEstimatorModal: React.FC<CostEstimatorModalProps> = ({
                 step="100"
                 value={inputs.areaSqFt}
                 onChange={(e) => setInputs({ ...inputs, areaSqFt: Number(e.target.value) })}
-                className="w-full accent-[#003629] cursor-pointer"
+                className="w-full accent-[#4A3728] cursor-pointer"
               />
               <div className="flex justify-between text-[11px] text-slate-400">
                 <span>800 sq ft</span>
@@ -121,7 +121,7 @@ export const CostEstimatorModal: React.FC<CostEstimatorModalProps> = ({
               <select
                 value={inputs.category}
                 onChange={(e) => setInputs({ ...inputs, category: e.target.value as any })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-[#003629] focus:outline-none focus:ring-2 focus:ring-[#003629]"
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
               >
                 <option value="Complete Villa">Complete Villa (Turnkey Architecture + Build)</option>
                 <option value="Architectural Blueprint">Architectural Blueprint & Permits Only</option>
@@ -143,7 +143,7 @@ export const CostEstimatorModal: React.FC<CostEstimatorModalProps> = ({
                     onClick={() => setInputs({ ...inputs, qualityLevel: grade })}
                     className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
                       inputs.qualityLevel === grade
-                        ? 'bg-[#003629] text-white border-[#003629] shadow-sm'
+                        ? 'bg-[#4A3728] text-white border-[#4A3728] shadow-sm'
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
@@ -191,10 +191,10 @@ export const CostEstimatorModal: React.FC<CostEstimatorModalProps> = ({
           </div>
 
           {/* Results Summary Box */}
-          <div className="p-6 bg-gradient-to-br from-[#003629] to-[#1b4d3e] text-white rounded-2xl shadow-lg border border-[#003629]/20 space-y-5">
+          <div className="p-6 bg-gradient-to-br from-[#4A3728] to-[#6B5040] text-white rounded-2xl shadow-lg border border-[#4A3728]/20 space-y-5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-white/10 pb-4">
               <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-[#ecc246]">
+                <span className="text-xs font-bold uppercase tracking-widest text-[#C4A882]">
                   Estimated Investment Total
                 </span>
                 <div className="text-3xl sm:text-4xl font-display font-extrabold text-white mt-1">
@@ -249,7 +249,7 @@ export const CostEstimatorModal: React.FC<CostEstimatorModalProps> = ({
               onPostRequirementWithEstimate(inputs, totalCost);
               onClose();
             }}
-            className="w-full sm:w-auto px-6 py-3 bg-[#755b00] hover:bg-[#584400] text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2"
+            className="w-full sm:w-auto px-6 py-3 bg-[#9B7B5A] hover:bg-[#7A5C45] text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2"
           >
             <span>Request Bids with this Estimate</span>
             <ArrowRight className="w-4 h-4 text-amber-200" />
