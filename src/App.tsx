@@ -450,10 +450,16 @@ export default function App() {
         ) : activeTab === 'client-portal' ? (
           <ClientPortal
             requirements={requirements}
+            professionals={professionals}
             onAddRequirement={handleAddRequirement}
             onOpenCostEstimator={() => setIsCostEstimatorOpen(true)}
             onOpenProposalMatrix={() => setIsProposalMatrixOpen(true)}
             onBrowseProfessionals={() => setActiveTab('professionals')}
+            onRequestQuote={(prof) => {
+              setSelectedProfForModal(prof);
+              setIsPostReqOpen(true);
+            }}
+            onSelectProfModal={(prof) => setSelectedProfForModal(prof)}
           />
         ) : (
           <>
@@ -481,18 +487,25 @@ export default function App() {
 
               <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 pt-2 px-2 sm:px-0">
                 <button
-                  onClick={() => setIsPostReqOpen(true)}
-                  className="bg-[#9B7B5A] hover:bg-[#7A5C45] text-white font-bold text-sm px-8 py-3.5 sm:py-4 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 w-full sm:w-auto cursor-pointer"
+                  onClick={() => setActiveTab('client-portal')}
+                  className="bg-[#9B7B5A] hover:bg-[#7A5C45] text-white font-bold text-sm px-7 py-3.5 sm:py-4 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 w-full sm:w-auto cursor-pointer"
                 >
-                  <span>Get Started</span>
-                  <ArrowRight className="w-4 h-4 text-amber-200" />
+                  <Sparkles className="w-4 h-4 text-amber-200" />
+                  <span>⚡ Find Engineer Match</span>
+                </button>
+
+                <button
+                  onClick={() => setIsPostReqOpen(true)}
+                  className="bg-[#4A3728] hover:bg-[#6B5040] text-white font-bold text-sm px-7 py-3.5 sm:py-4 rounded-full shadow-md transition-all text-center w-full sm:w-auto cursor-pointer"
+                >
+                  Post Requirement
                 </button>
 
                 <button
                   onClick={() => handleCategoryExplore('All')}
-                  className="border-2 border-[#4A3728] text-[#4A3728] hover:bg-[#4A3728]/5 font-bold text-sm px-8 py-3.5 sm:py-4 rounded-full transition-all text-center w-full sm:w-auto cursor-pointer"
+                  className="border-2 border-[#4A3728] text-[#4A3728] hover:bg-[#4A3728]/5 font-bold text-sm px-7 py-3.5 sm:py-4 rounded-full transition-all text-center w-full sm:w-auto cursor-pointer"
                 >
-                  Browse Professionals
+                  Browse Directory
                 </button>
               </div>
 

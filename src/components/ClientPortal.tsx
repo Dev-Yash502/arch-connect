@@ -15,22 +15,29 @@ import {
   Compass,
   FileText
 } from 'lucide-react';
-import { ProjectRequirement, ProfessionalCategory } from '../types';
+import { ClientEngineerMatcher } from './ClientEngineerMatcher';
+import { ProjectRequirement, ProfessionalCategory, Professional } from '../types';
 
 interface ClientPortalProps {
   requirements: ProjectRequirement[];
+  professionals: Professional[];
   onAddRequirement: (req: ProjectRequirement) => void;
   onOpenCostEstimator: () => void;
   onOpenProposalMatrix: () => void;
   onBrowseProfessionals: () => void;
+  onRequestQuote: (prof: Professional) => void;
+  onSelectProfModal: (prof: Professional) => void;
 }
 
 export const ClientPortal: React.FC<ClientPortalProps> = ({
   requirements,
+  professionals,
   onAddRequirement,
   onOpenCostEstimator,
   onOpenProposalMatrix,
-  onBrowseProfessionals
+  onBrowseProfessionals,
+  onRequestQuote,
+  onSelectProfModal
 }) => {
   const [showPostForm, setShowPostForm] = useState(false);
 
@@ -252,6 +259,14 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
             </form>
           </div>
         )}
+
+        {/* SMART ENGINEER & PROFESSIONAL MATCHER SECTION */}
+        <ClientEngineerMatcher
+          requirements={requirements}
+          professionals={professionals}
+          onRequestQuote={onRequestQuote}
+          onSelectProfModal={onSelectProfModal}
+        />
 
         {/* Requirements Feed & Actions */}
         <div className="space-y-6">

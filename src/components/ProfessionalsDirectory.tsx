@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Search, Filter, Star, MapPin, Award, CheckCircle2, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Professional, ProfessionalCategory } from '../types';
 
@@ -52,20 +52,42 @@ export const ProfessionalsDirectory: React.FC<ProfessionalsDirectoryProps> = ({
 
         {/* Category Pills Filter Bar */}
         <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all shadow-2xs ${
-                activeCategory === cat
-                  ? 'bg-[#4A3728] text-white shadow-md scale-105'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+          {categories.map((cat) => {
+            const isMaterial = cat === 'Material Providers';
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all shadow-2xs flex items-center space-x-1.5 ${
+                  activeCategory === cat
+                    ? 'bg-[#4A3728] text-white shadow-md scale-105'
+                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                <span>{cat}</span>
+                {isMaterial && (
+                  <span className="text-[9px] uppercase font-extrabold px-2 py-0.5 bg-amber-200 text-amber-900 rounded-full border border-amber-300 ml-1">
+                    Coming Soon
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {activeCategory === 'Material Providers' && (
+          <div className="bg-amber-900/10 border border-amber-800/20 p-6 rounded-3xl text-center space-y-2 max-w-xl mx-auto">
+            <span className="text-xs uppercase font-extrabold tracking-widest text-[#9B7B5A]">
+              Direct Supplier Marketplace
+            </span>
+            <h3 className="font-display font-extrabold text-xl text-[#4A3728]">
+              Material Supply Portal Launching Q3 2026 🚀
+            </h3>
+            <p className="text-xs text-slate-700 leading-relaxed">
+              We are onboarding certified distributors for Italian Slate, Teak Timber, Solar Panels & Structural Steel. In the meantime, certified Civil Engineers and Architects are fully active and taking bookings!
+            </p>
+          </div>
+        )}
 
         {/* Search & Secondary Filter Bar */}
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-12 gap-4 items-center">

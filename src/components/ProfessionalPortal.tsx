@@ -316,7 +316,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
                     alt="Avatar Preview"
                     className="w-16 h-16 rounded-full object-cover border-2 border-[#4A3728] shadow-sm flex-shrink-0"
                   />
-                  <div className="flex-1 w-full space-y-2">
+                  <div className="flex-1 w-full space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <label className="px-4 py-2 bg-[#4A3728] hover:bg-[#6B5040] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs transition-colors inline-flex items-center space-x-1.5">
                         <ImageIcon className="w-3.5 h-3.5" />
@@ -339,13 +339,6 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
                       </label>
                       <span className="text-[11px] text-slate-500 font-medium">PNG, JPG up to 5MB</span>
                     </div>
-                    <input
-                      type="text"
-                      value={avatar}
-                      onChange={(e) => setAvatar(e.target.value)}
-                      placeholder="Or paste image URL link (e.g. https://...)"
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
-                    />
                   </div>
                 </div>
               </div>
@@ -453,41 +446,35 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
 
                   <div>
                     <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">Project Cover Image</label>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <label className="px-3 py-1.5 bg-[#4A3728] hover:bg-[#6B5040] text-white text-xs font-bold rounded-lg cursor-pointer transition-colors inline-flex items-center space-x-1">
-                          <ImageIcon className="w-3.5 h-3.5" />
-                          <span>Choose File from Device</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setProjImage(reader.result as string);
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </label>
-                        {projImage && (
-                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                            Photo Loaded ✓
-                          </span>
-                        )}
-                      </div>
-                      <input
-                        type="text"
-                        required
-                        value={projImage}
-                        onChange={(e) => setProjImage(e.target.value)}
-                        placeholder="Or paste image URL link (e.g. https://...)"
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
-                      />
+                    <div className="flex items-center gap-2">
+                      <label className="px-3 py-1.5 bg-[#4A3728] hover:bg-[#6B5040] text-white text-xs font-bold rounded-lg cursor-pointer transition-colors inline-flex items-center space-x-1">
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        <span>Choose File from Device</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setProjImage(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                      {projImage ? (
+                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          Photo Selected ✓
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          No photo chosen
+                        </span>
+                      )}
                     </div>
                   </div>
 
