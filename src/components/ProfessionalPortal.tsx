@@ -13,36 +13,55 @@ import {
   Save,
   Eye,
   ShieldCheck,
-  Building
+  Building,
+  Inbox,
+  Clock,
+  IndianRupee,
+  ArrowRight,
+  BadgeCheck,
+  Send
 } from 'lucide-react';
-import { Professional, ProfessionalCategory, PortfolioItem } from '../types';
+import { Professional, ProfessionalCategory, PortfolioItem, ProjectRequirement, Proposal, AuthUser } from '../types';
 
 interface ProfessionalPortalProps {
   professionals: Professional[];
+  requirements: ProjectRequirement[];
+  proposals?: Proposal[];
   onSaveProfessional: (prof: Professional) => void;
   onSelectViewDirectory: () => void;
+  onAddProposal?: (proposal: Proposal) => void;
+  currentUser?: AuthUser | null;
 }
 
 export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
   professionals,
+  requirements,
+  proposals = [],
   onSaveProfessional,
-  onSelectViewDirectory
+  onSelectViewDirectory,
+  onAddProposal,
+  currentUser
 }) => {
-  const [selectedProfId, setSelectedProfId] = useState<string>(professionals[0]?.id || '');
-  
-  // Active editing state
-  const currentProf = professionals.find((p) => p.id === selectedProfId) || professionals[0];
+  const [activePortalTab, setActivePortalTab] = useState<'portfolio' | 'requests'>('portfolio');
+  const [expressedInterest, setExpressedInterest] = useState<Set<string>>(new Set());
 
-  const [name, setName] = useState(currentProf?.name || '');
-  const [role, setRole] = useState<ProfessionalCategory>(currentProf?.role || 'Architects');
-  const [title, setTitle] = useState(currentProf?.title || '');
-  const [experienceYears, setExperienceYears] = useState(currentProf?.experienceYears || 5);
-  const [pricePerSqFt, setPricePerSqFt] = useState(currentProf?.pricePerSqFt || 150);
-  const [location, setLocation] = useState(currentProf?.location || 'Delhi NCR, India');
-  const [bio, setBio] = useState(currentProf?.bio || '');
-  const [specialtiesText, setSpecialtiesText] = useState(currentProf?.specialties?.join(', ') || '');
-  const [avatar, setAvatar] = useState(currentProf?.avatar || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80');
-  const [portfolio, setPortfolio] = useState<PortfolioItem[]>(currentProf?.portfolio || []);
+  const openRequirements = requirements.filter(r => r.status === 'Open for Bids');
+
+  // Active editing state linked to logged-in user
+  const currentProf = professionals.find((p) => p.id === currentUser?.id || p.owner_id === currentUser?.id);
+
+  const [name, setName] = useState('');
+  const [role, setRole] = useState<ProfessionalCategory>('Architects');
+  const [title, setTitle] = useState('');
+  const [experienceYears, setExperienceYears] = useState(5);
+  const [pricePerSqFt, setPricePerSqFt] = useState(100);
+  const [location, setLocation] = useState('');
+  const [bio, setBio] = useState('');
+  const [specialtiesText, setSpecialtiesText] = useState('');
+  const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
 
   // Form for adding new portfolio project
   const [showAddProject, setShowAddProject] = useState(false);
@@ -55,23 +74,36 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Sync state when selecting another professional to edit
-  const handleSelectProf = (id: string) => {
-    setSelectedProfId(id);
-    const prof = professionals.find((p) => p.id === id);
-    if (prof) {
-      setName(prof.name);
-      setRole(prof.role);
-      setTitle(prof.title);
-      setExperienceYears(prof.experienceYears);
-      setPricePerSqFt(prof.pricePerSqFt);
-      setLocation(prof.location);
-      setBio(prof.bio);
-      setSpecialtiesText(prof.specialties.join(', '));
-      setAvatar(prof.avatar);
-      setPortfolio(prof.portfolio);
+  // Sync state with currentProf database entity
+  React.useEffect(() => {
+    if (currentProf) {
+      setName(currentProf.name || '');
+      setRole(currentProf.role || 'Architects');
+      setTitle(currentProf.title || '');
+      setExperienceYears(currentProf.experienceYears || 5);
+      setPricePerSqFt(currentProf.pricePerSqFt || 100);
+      setLocation(currentProf.location || '');
+      setBio(currentProf.bio || '');
+      setSpecialtiesText(currentProf.specialties?.join(', ') || '');
+      setAvatar(currentProf.avatar || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80');
+      setPhone(currentProf.phone || '');
+      setEmail(currentProf.email || '');
+      setPortfolio(currentProf.portfolio || []);
+    } else if (currentUser) {
+      setName(currentUser.name || '');
+      setEmail(currentUser.email || '');
+      setRole('Architects');
+      setTitle('');
+      setExperienceYears(5);
+      setPricePerSqFt(100);
+      setLocation('');
+      setBio('');
+      setSpecialtiesText('');
+      setAvatar('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80');
+      setPhone('');
+      setPortfolio([]);
     }
-  };
+  }, [currentProf, currentUser]);
 
   const handleAddPortfolioProject = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,38 +130,11 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
     setPortfolio(portfolio.filter((p) => p.id !== id));
   };
 
-  const handleCreateNewProfile = () => {
-    const newId = `prof-${Date.now()}`;
-    const newProf: Professional = {
-      id: newId,
-      name: 'Ar. New Expert',
-      role: 'Architects',
-      title: 'Principal Designer & Founder',
-      rating: 5.0,
-      reviewCount: 1,
-      experienceYears: 6,
-      pricePerSqFt: 160,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-      badge: 'Verified',
-      location: 'Delhi NCR, India',
-      bio: 'Crafting modern luxury architectural spaces.',
-      specialties: ['Residential Design', 'Modern Elevation', '3D Blueprinting'],
-      completedProjectsCount: 12,
-      phone: '+91 98000 00000',
-      email: 'contact@expert.in',
-      portfolio: []
-    };
-
-    onSaveProfessional(newProf);
-    handleSelectProf(newId);
-  };
-
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentProf) return;
 
     const updated: Professional = {
-      ...currentProf,
+      id: currentProf?.id || currentUser?.id || `prof-${Date.now()}`,
       name,
       role,
       title,
@@ -139,7 +144,13 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
       bio,
       avatar,
       specialties: specialtiesText.split(',').map((s) => s.trim()).filter(Boolean),
-      portfolio
+      phone,
+      email,
+      portfolio,
+      rating: currentProf?.rating || 5.0,
+      reviewCount: currentProf?.reviewCount || 1,
+      completedProjectsCount: currentProf?.completedProjectsCount || 0,
+      badge: currentProf?.badge || 'Verified'
     };
 
     onSaveProfessional(updated);
@@ -149,7 +160,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
 
   return (
     <div className="py-12 bg-[#FDF8F0] min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-8">
         
         {/* Portal Header */}
         <div className="bg-gradient-to-r from-[#4A3728] via-[#6B5040] to-[#4A3728] rounded-3xl p-6 sm:p-10 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -159,21 +170,14 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
               <span>Professional Studio Dashboard</span>
             </div>
             <h1 className="font-display font-extrabold text-2xl sm:text-4xl text-white">
-              Portfolio & Profile Builder
+              Professional Hub
             </h1>
             <p className="text-xs sm:text-sm text-slate-200 max-w-xl">
-              Build your verified profile, showcase high-res project portfolios, set custom pricing per sq.ft., and receive direct client quote inquiries.
+              Manage your profile, portfolio, and see live client project requests.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleCreateNewProfile}
-              className="px-5 py-3 bg-[#9B7B5A] hover:bg-[#7A5C45] text-white font-bold text-xs sm:text-sm rounded-full shadow-md transition-all flex items-center space-x-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create New Profile</span>
-            </button>
             <button
               onClick={onSelectViewDirectory}
               className="px-5 py-3 bg-white/15 hover:bg-white/25 text-white font-bold text-xs sm:text-sm rounded-full border border-white/20 transition-all flex items-center space-x-1.5"
@@ -184,26 +188,166 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
           </div>
         </div>
 
-        {/* Profile Switcher Tabs */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-2 border-b border-slate-200">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pr-2 flex-shrink-0">
-            Editing Profile:
-          </span>
-          {professionals.map((prof) => (
-            <button
-              key={prof.id}
-              onClick={() => handleSelectProf(prof.id)}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex-shrink-0 flex items-center space-x-2 ${
-                selectedProfId === prof.id
-                  ? 'bg-[#4A3728] text-white shadow-xs'
-                  : 'bg-white text-slate-700 hover:bg-slate-200/60 border border-slate-200'
-              }`}
-            >
-              <img src={prof.avatar} alt={prof.name} className="w-4 h-4 rounded-full object-cover" />
-              <span>{prof.name}</span>
-            </button>
-          ))}
+        {/* Main Tab Switcher */}
+        <div className="flex gap-2 bg-slate-200/50 p-1 rounded-2xl w-fit">
+          <button
+            onClick={() => setActivePortalTab('portfolio')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+              activePortalTab === 'portfolio'
+                ? 'bg-[#4A3728] text-white shadow-md'
+                : 'text-slate-600 hover:text-[#4A3728]'
+            }`}
+          >
+            <Briefcase className="w-4 h-4" />
+            My Portfolio
+          </button>
+          <button
+            onClick={() => setActivePortalTab('requests')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all relative ${
+              activePortalTab === 'requests'
+                ? 'bg-[#4A3728] text-white shadow-md'
+                : 'text-slate-600 hover:text-[#4A3728]'
+            }`}
+          >
+            <Inbox className="w-4 h-4" />
+            Client Requests
+            {openRequirements.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">
+                {openRequirements.length}
+              </span>
+            )}
+          </button>
         </div>
+
+        {/* ─── CLIENT REQUESTS TAB ─── */}
+        {activePortalTab === 'requests' && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-display font-extrabold text-2xl text-[#4A3728]">Live Client Requests</h2>
+                <p className="text-sm text-slate-500 mt-0.5">{openRequirements.length} open project{openRequirements.length !== 1 ? 's' : ''} looking for professionals</p>
+              </div>
+            </div>
+
+            {openRequirements.length === 0 ? (
+              <div className="text-center py-16 space-y-3">
+                <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto">
+                  <Inbox className="w-8 h-8 text-slate-300" />
+                </div>
+                <p className="text-slate-400 font-semibold">No open project requests at the moment</p>
+                <p className="text-slate-400 text-sm">New client project postings will appear here</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {openRequirements.map(req => {
+                  const interested = expressedInterest.has(req.id) || proposals?.some(p => p.requirementId === req.id && (p.professionalName === currentProf?.name || p.professionalId === currentProf?.id));
+                  return (
+                    <div key={req.id} className={`bg-white rounded-2xl border-2 shadow-sm hover:shadow-md transition-all p-5 space-y-4 ${
+                      interested ? 'border-green-200' : 'border-slate-100 hover:border-[#9B7B5A]/30'
+                    }`}>
+                      {/* Status + Category */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wide">
+                            {req.status}
+                          </span>
+                          <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                            {req.category}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 flex items-center gap-1 flex-shrink-0">
+                          <Clock className="w-3 h-3" />
+                          {req.createdAt}
+                        </span>
+                      </div>
+
+                      {/* Title */}
+                      <h3 className="font-bold text-[#4A3728] text-base leading-snug">{req.title}</h3>
+
+                      {/* Details grid */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                          <MapPin className="w-3.5 h-3.5 text-[#9B7B5A] flex-shrink-0" />
+                          <span className="truncate">{req.location}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                          <Building className="w-3.5 h-3.5 text-[#9B7B5A] flex-shrink-0" />
+                          <span>{req.builtUpAreaSqFt?.toLocaleString()} sqft</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                          <IndianRupee className="w-3.5 h-3.5 text-[#9B7B5A] flex-shrink-0" />
+                          <span className="truncate">{req.budgetRange}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                          <Clock className="w-3.5 h-3.5 text-[#9B7B5A] flex-shrink-0" />
+                          <span>{req.preferredTimeline}</span>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{req.description}</p>
+
+                      {/* Style tag */}
+                      {req.architecturalStyle && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                          Style: {req.architecturalStyle}
+                        </span>
+                      )}
+
+                      {/* CTA */}
+                      {interested ? (
+                        <div className="flex items-center gap-2 py-2.5 px-4 bg-green-50 border border-green-200 rounded-xl">
+                          <BadgeCheck className="w-4 h-4 text-green-600 flex-shrink-0" />
+                          <span className="text-xs font-bold text-green-700">Interest Expressed! Client has been notified.</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setExpressedInterest(prev => new Set([...prev, req.id]));
+                            if (onAddProposal) {
+                              const newProp: Proposal = {
+                                id: `prop-${Date.now()}`,
+                                requirementId: req.id,
+                                professionalId: currentProf?.id || currentUser?.id || `prof-${Date.now()}`,
+                                professionalName: name || currentProf?.name || currentUser?.name || 'Ar. Verified Expert',
+                                professionalRole: role || currentProf?.role || 'Architects',
+                                professionalAvatar: avatar || currentProf?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+                                rating: currentProf?.rating || 4.9,
+                                priceEstimateTotal: Math.round((req.builtUpAreaSqFt || 2000) * (pricePerSqFt || currentProf?.pricePerSqFt || 150)),
+                                timelineEstimateMonths: 6,
+                                keyHighlights: [
+                                  'Custom 3D Architectural Blueprint & Permits',
+                                  'Dedicated Site Inspections & Milestone Supervision',
+                                  'Structural & Electrical Load Calculation'
+                                ],
+                                scopeBreakdown: [
+                                  { item: 'Design & Permitting', cost: Math.round((req.builtUpAreaSqFt || 2000) * 50) },
+                                  { item: 'Supervision & Execution', cost: Math.round((req.builtUpAreaSqFt || 2000) * 100) }
+                                ],
+                                status: 'Pending'
+                              };
+                              onAddProposal(newProp);
+                            }
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#4A3728] hover:bg-[#6B5040] text-white font-bold text-xs rounded-xl transition-all shadow-sm hover:shadow-md"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          Express Interest
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── PORTFOLIO TAB ─── */}
+        {activePortalTab === 'portfolio' && (
+        <div className="space-y-8">
+
 
         {savedSuccess && (
           <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl flex items-center space-x-3 animate-fade-in">
@@ -268,6 +412,32 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
                   placeholder="Principal Architect & Founder, Atelier Verma"
                   className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Contact Phone</label>
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. +91 98765 43210"
+                    className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Contact Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. contact@yourfirm.com"
+                    className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -564,6 +734,8 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
             </div>
           </div>
         </div>
+        </div>
+        )} {/* end portfolio tab */}
       </div>
     </div>
   );

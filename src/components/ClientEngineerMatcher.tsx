@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   Award,
@@ -29,9 +29,24 @@ export const ClientEngineerMatcher: React.FC<ClientEngineerMatcherProps> = ({
   onSelectProfModal
 }) => {
   const [selectedReqId, setSelectedReqId] = useState<string>(requirements[0]?.id || '');
-  const [targetCategory, setTargetCategory] = useState<'All' | 'Civil Engineers' | 'Architects' | 'Interior Designers'>('Civil Engineers');
+  const [targetCategory, setTargetCategory] = useState<'All' | 'Civil Engineers' | 'Architects' | 'Interior Designers'>('All');
 
   const selectedReq = requirements.find((r) => r.id === selectedReqId) || requirements[0];
+
+  // Sync selected target category filter when active project requirement changes
+  useEffect(() => {
+    if (selectedReq) {
+      if (selectedReq.category === 'All-in-One Turnkey') {
+        setTargetCategory('All');
+      } else {
+        // Map types correctly
+        const reqCat = selectedReq.category;
+        if (reqCat === 'Civil Engineers' || reqCat === 'Architects' || reqCat === 'Interior Designers') {
+          setTargetCategory(reqCat);
+        }
+      }
+    }
+  }, [selectedReqId, requirements]);
 
   // Smart Matching Algorithm
   const matchedProfessionals = professionals
@@ -144,8 +159,11 @@ export const ClientEngineerMatcher: React.FC<ClientEngineerMatcherProps> = ({
       {/* Matched Engineers List */}
       <div className="space-y-4">
         {matchedProfessionals.length === 0 ? (
-          <div className="text-center py-10 text-slate-500">
-            No matching professionals found for this category.
+          <div className="text-center py-12 bg-[#FDF8F0]/30 rounded-2xl border border-dashed border-slate-300 p-6 space-y-2">
+            <p className="font-semibold text-slate-700 text-sm">No Match Found</p>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              There are currently no registered experts matching the category <strong>"{targetCategory}"</strong> of your project brief in the database.
+            </p>
           </div>
         ) : (
           matchedProfessionals.map(({ prof, matchPercentage, matchReasons }) => (

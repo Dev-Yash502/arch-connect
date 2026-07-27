@@ -1,5 +1,15 @@
 export type ProfessionalCategory = 'Architects' | 'Interior Designers' | 'Civil Engineers' | 'Material Providers';
 
+export type UserRole = 'client' | 'professional' | 'admin';
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  joinedAt: string;
+}
+
 export interface PortfolioItem {
   id: string;
   title: string;
@@ -40,7 +50,8 @@ export interface ProjectRequirement {
   preferredTimeline: string;
   architecturalStyle: string;
   description: string;
-  status: 'Open for Bids' | 'Matched' | 'Under Review';
+  status: 'Open for Bids' | 'Matched' | 'Under Review' | 'Completed';
+  ownerId?: string;
   createdAt: string;
 }
 

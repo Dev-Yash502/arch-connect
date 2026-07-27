@@ -1,33 +1,186 @@
-﻿import React, { useState } from 'react';
-import { X, ShieldCheck, Mail, Lock, User, Building, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  X,
+  ShieldCheck,
+  Mail,
+  Lock,
+  User,
+  ArrowRight,
+  Home,
+  Briefcase,
+  LogIn,
+  UserPlus,
+  CheckCircle2,
+  Info,
+  Loader2
+} from 'lucide-react';
+import { AuthUser, UserRole } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onLogin: (user: AuthUser) => void;
+  defaultMode?: 'login' | 'signup';
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [role, setRole] = useState<'homeowner' | 'professional'>('homeowner');
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, defaultMode }) => {
+  const [mode, setMode] = useState<'login' | 'signup'>(defaultMode ?? 'login');
+  const [role, setRole] = useState<'client' | 'professional'>('client');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setEmail('');
+    setPassword('');
+    setName('');
+    setError('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccess(true);
-    setTimeout(() => {
-      setSuccess(false);
-      onClose();
-    }, 1500);
+    setError('');
+    setLoading(true);
+
+    try {
+      if (mode === 'signup') {
+        // 1. Create auth user — name & role go into metadata
+        //    so the DB trigger auto-creates user_profiles row
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: {
+            data: {
+              name: name.trim(),
+              role: role,
+            },
+          },
+        });
+
+        if (signUpError) {
+          if (signUpError.message.includes('already registered') || signUpError.message.includes('User already registered'))
+            throw new Error('This email is already registered. Please log in.');
+          throw signUpError;
+        }
+        if (!data.user) throw new Error('Signup failed — no user returned.');
+
+        // 2. Fallback upsert — trigger normally handles this,
+        //    but this ensures profile exists even if trigger is delayed
+        await supabase
+          .from('user_profiles')
+          .upsert({
+            id: data.user.id,
+            name: name.trim(),
+            role: role as UserRole,
+          }, { onConflict: 'id' });
+
+        // 3a. Session exists → email confirmation OFF → direct login
+        if (data.session) {
+          const authUser: AuthUser = {
+            id: data.user.id,
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            role: role as UserRole,
+            joinedAt: data.user.created_at,
+          };
+          setSuccess(true);
+          setTimeout(() => {
+            setSuccess(false);
+            onLogin(authUser);
+            onClose();
+          }, 1200);
+          return;
+        }
+
+        // 3b. No session → email confirmation still ON
+        setError('✅ Account created! Please check your email inbox for a confirmation link, then log in.');
+        setLoading(false);
+        return;
+
+      } else {
+        // Login
+        const inputEmail = email.trim().toLowerCase();
+        if ((inputEmail === 'admin' || inputEmail === 'admin@archconnect.com') && password === 'kfyarchconnect') {
+          const adminUser: AuthUser = {
+            id: 'admin-system',
+            name: 'Platform Administrator',
+            email: 'admin@archconnect.com',
+            role: 'admin',
+            joinedAt: new Date().toISOString()
+          };
+          localStorage.setItem('admin_session', JSON.stringify(adminUser));
+          setSuccess(true);
+          setTimeout(() => {
+            setSuccess(false);
+            onLogin(adminUser);
+            onClose();
+          }, 1000);
+          return;
+        }
+
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: inputEmail,
+          password,
+        });
+
+        if (signInError) {
+          // Make Supabase errors human-friendly
+          const msg = signInError.message;
+          if (msg.includes('Email not confirmed'))
+            throw new Error('Email is not confirmed yet. Please check your inbox for the confirmation link.');
+          if (msg.includes('Invalid login credentials'))
+            throw new Error('Invalid email or password. Please try again.');
+          throw signInError;
+        }
+        if (!data.user) throw new Error('Login failed.');
+
+        // Fetch profile to get name + role
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('name, role, joined_at')
+          .eq('id', data.user.id)
+          .single();
+
+        // Profile missing → recovery: ask user to sign up again
+        if (profileError || !profile) {
+          await supabase.auth.signOut();
+          throw new Error(
+            'Profile setup is incomplete. Please sign up again with your email and password.'
+          );
+        }
+
+        const authUser: AuthUser = {
+          id: data.user.id,
+          name: profile.name,
+          email: data.user.email!,
+          role: profile.role as UserRole,
+          joinedAt: profile.joined_at,
+        };
+
+        setSuccess(true);
+        setTimeout(() => {
+          setSuccess(false);
+          onLogin(authUser);
+          onClose();
+        }, 1200);
+      }
+    } catch (err: any) {
+      setError(err.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
       <div className="relative w-full max-w-md bg-[#FDF8F0] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 bg-[#4A3728] text-white">
           <div className="flex items-center space-x-2.5">
@@ -35,7 +188,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <ShieldCheck className="w-5 h-5 text-[#C4A882]" />
             </div>
             <h2 className="font-display font-bold text-lg text-white">
-              {mode === 'login' ? 'Welcome Back' : 'Create Arch-Connect Account'}
+              {mode === 'login' ? 'Welcome Back' : 'Create Your Account'}
             </h2>
           </div>
           <button
@@ -46,41 +199,103 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Form Body */}
+        {/* Body */}
         {success ? (
-          <div className="p-8 text-center space-y-3">
-            <div className="w-12 h-12 bg-amber-100 text-amber-900 rounded-full flex items-center justify-center mx-auto">
-              <ShieldCheck className="w-8 h-8" />
+          <div className="p-10 text-center space-y-4">
+            <div className="w-14 h-14 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
             <h3 className="font-display font-bold text-lg text-[#4A3728]">
-              Authentication Successful
+              {mode === 'login' ? 'Logged In!' : 'Account Created!'}
             </h3>
-            <p className="text-xs text-slate-600">Logged in as {email || 'user@arch-connect.com'}</p>
+            <p className="text-xs text-slate-500">Redirecting to your dashboard…</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            {/* Account Role Selector */}
+
+            {/* Mode Toggle */}
             <div className="grid grid-cols-2 gap-2 bg-slate-200/60 p-1 rounded-xl text-xs font-bold">
               <button
                 type="button"
-                onClick={() => setRole('homeowner')}
-                className={`py-2 rounded-lg transition-all ${
-                  role === 'homeowner' ? 'bg-[#4A3728] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                onClick={() => { setMode('login'); resetForm(); }}
+                className={`py-2 flex items-center justify-center gap-1.5 rounded-lg transition-all ${
+                  mode === 'login' ? 'bg-[#4A3728] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Homeowner
+                <LogIn className="w-3.5 h-3.5" />
+                Log In
               </button>
               <button
                 type="button"
-                onClick={() => setRole('professional')}
-                className={`py-2 rounded-lg transition-all ${
-                  role === 'professional' ? 'bg-[#4A3728] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                onClick={() => { setMode('signup'); resetForm(); }}
+                className={`py-2 flex items-center justify-center gap-1.5 rounded-lg transition-all ${
+                  mode === 'signup' ? 'bg-[#4A3728] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Architect / Expert
+                <UserPlus className="w-3.5 h-3.5" />
+                Sign Up
               </button>
             </div>
 
+            {/* Role Selector — signup only */}
+            {mode === 'signup' && (
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  I am joining as…
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole('client')}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+                      role === 'client'
+                        ? 'border-[#4A3728] bg-[#4A3728]/5 text-[#4A3728]'
+                        : 'border-slate-200 text-slate-500 hover:border-[#9B7B5A]/50'
+                    }`}
+                  >
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                      role === 'client' ? 'bg-[#4A3728] text-white' : 'bg-slate-100'
+                    }`}>
+                      <Home className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold">User</span>
+                    <span className="text-[10px] text-center leading-snug text-slate-400 font-normal">
+                      Post requirements & find experts
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRole('professional')}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+                      role === 'professional'
+                        ? 'border-[#4A3728] bg-[#4A3728]/5 text-[#4A3728]'
+                        : 'border-slate-200 text-slate-500 hover:border-[#9B7B5A]/50'
+                    }`}
+                  >
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                      role === 'professional' ? 'bg-[#4A3728] text-white' : 'bg-slate-100'
+                    }`}>
+                      <Briefcase className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold">Professional</span>
+                    <span className="text-[10px] text-center leading-snug text-slate-400 font-normal">
+                      Architect, Engineer, Designer
+                    </span>
+                  </button>
+                </div>
+
+                {/* Admin note */}
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mt-1">
+                  <Info className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-[10.5px] text-amber-800 leading-snug">
+                    <strong>Admin access</strong> is not available via signup — it must be manually set in the Supabase database by the developer.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Full Name — signup only */}
             {mode === 'signup' && (
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name</label>
@@ -91,28 +306,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Ar. John Doe"
+                    placeholder={role === 'professional' ? 'Ar. John Doe' : 'Rahul Sharma'}
                     className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                   />
                 </div>
               </div>
             )}
 
+            {/* Email / Username */}
             <div>
-              <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Email Address</label>
+              <label className="block text-xs font-bold text-slate-600 uppercase mb-1">
+                {mode === 'login' ? 'Username or Email' : 'Email Address'}
+              </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@domain.com"
+                  placeholder={mode === 'login' ? 'admin or name@domain.com' : 'name@domain.com'}
                   className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 />
               </div>
             </div>
 
+            {/* Password */}
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Password</label>
               <div className="relative">
@@ -120,26 +339,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 <input
                   type="password"
                   required
+                  minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Min 6 characters"
                   className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 />
               </div>
             </div>
 
+            {/* Error */}
+            {error && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
+                {error}
+              </p>
+            )}
+
+            {/* Submit */}
             <button
               type="submit"
-              className="w-full py-3 bg-[#4A3728] hover:bg-[#6B5040] text-white font-bold text-sm rounded-full shadow-md transition-all flex items-center justify-center space-x-2"
+              disabled={loading}
+              className="w-full py-3 bg-[#4A3728] hover:bg-[#6B5040] disabled:bg-[#4A3728]/50 text-white font-bold text-sm rounded-full shadow-md transition-all flex items-center justify-center space-x-2"
             >
-              <span>{mode === 'login' ? 'Log In to Dashboard' : 'Create Free Account'}</span>
-              <ArrowRight className="w-4 h-4 text-[#C4A882]" />
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <span>{mode === 'login' ? 'Log In to Dashboard' : 'Create Free Account'}</span>
+                  <ArrowRight className="w-4 h-4 text-[#C4A882]" />
+                </>
+              )}
             </button>
 
-            <div className="text-center pt-2">
+            <div className="text-center pt-1">
               <button
                 type="button"
-                onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); resetForm(); }}
                 className="text-xs font-semibold text-[#9B7B5A] hover:underline"
               >
                 {mode === 'login' ? "Don't have an account? Sign Up" : 'Already registered? Log In'}

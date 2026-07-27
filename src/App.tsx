@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from './lib/supabase';
 import { Header } from './components/Header';
 import { ScrollAnimationHero } from './components/ScrollAnimationHero';
 
@@ -6,16 +7,16 @@ import { ProfessionalsDirectory } from './components/ProfessionalsDirectory';
 import { CostEstimatorModal } from './components/CostEstimatorModal';
 import { PostRequirementModal } from './components/PostRequirementModal';
 import { ProposalComparatorModal } from './components/ProposalComparatorModal';
-import { ProjectDetailsModal } from './components/ProjectDetailsModal';
 import { ProfessionalDetailModal } from './components/ProfessionalDetailModal';
 import { AuthModal } from './components/AuthModal';
 import { Footer } from './components/Footer';
 
 import { ProfessionalPortal } from './components/ProfessionalPortal';
 import { ClientPortal } from './components/ClientPortal';
+import { LandingPage } from './components/LandingPage';
+import { AdminPanel } from './components/AdminPanel';
 
-import { INITIAL_PROFESSIONALS, MOCK_ACTIVE_PROJECT, MOCK_PROPOSALS, MOCK_REQUIREMENTS } from './data/mockData';
-import { Professional, CostEstimateInput, ProjectRequirement } from './types';
+import { Professional, CostEstimateInput, ProjectRequirement, AuthUser, Proposal } from './types';
 
 import {
   Compass,
@@ -75,51 +76,377 @@ function SocialBtn({ href, icon: Icon, bgColor, textColor }: SocialBtnProps) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
-  const [professionals, setProfessionals] = useState<Professional[]>(() => {
-    try {
-      const saved = localStorage.getItem('arch_connect_professionals');
-      return saved ? JSON.parse(saved) : INITIAL_PROFESSIONALS;
-    } catch {
-      return INITIAL_PROFESSIONALS;
+
+  // --- Auth / RBAC State (Supabase Auth) ---
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [pendingRequirement, setPendingRequirement] = useState<any>(null);
+
+  // On mount: restore session from Supabase + listen for auth changes
+  useEffect(() => {
+    // Restore admin session from localStorage if present
+    const savedAdmin = localStorage.getItem('admin_session');
+    if (savedAdmin) {
+      try {
+        const adminUser = JSON.parse(savedAdmin);
+        setCurrentUser(adminUser);
+        setAuthLoading(false);
+        return;
+      } catch (err) {
+        localStorage.removeItem('admin_session');
+      }
     }
-  });
 
-  const [requirements, setRequirements] = useState<ProjectRequirement[]>(() => {
-    try {
-      const saved = localStorage.getItem('arch_connect_requirements');
-      return saved ? JSON.parse(saved) : MOCK_REQUIREMENTS;
-    } catch {
-      return MOCK_REQUIREMENTS;
-    }
-  });
-
-  const [proposals, setProposals] = useState(MOCK_PROPOSALS);
-
-  const handleSaveProfessional = (updatedProf: Professional) => {
-    setProfessionals((prev) => {
-      const exists = prev.some((p) => p.id === updatedProf.id);
-      const newList = exists
-        ? prev.map((p) => (p.id === updatedProf.id ? updatedProf : p))
-        : [updatedProf, ...prev];
-      localStorage.setItem('arch_connect_professionals', JSON.stringify(newList));
-      return newList;
+    // Restore existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('name, role, joined_at')
+          .eq('id', session.user.id)
+          .single();
+        if (profile) {
+          setCurrentUser({
+            id: session.user.id,
+            name: profile.name,
+            email: session.user.email!,
+            role: profile.role,
+            joinedAt: profile.joined_at,
+          });
+        }
+      }
+      setAuthLoading(false);
     });
+
+    // Listen for future login/logout events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        setCurrentUser(null);
+        setActiveTab('home');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Fetch professionals from Supabase (falls back to mock data for seeding)
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [profsLoaded, setProfsLoaded] = useState(false);
+
+  useEffect(() => {
+    const fetchProfessionals = async () => {
+      // Clean up old mock database rows (Vikram Malhotra, Rohan Kapoor, Apex Material Solutions)
+      await supabase
+        .from('professionals')
+        .delete()
+        .or('name.ilike.%Vikram%,name.ilike.%Rohan%,name.ilike.%Apex%');
+
+      const { data, error } = await supabase
+        .from('professionals')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error || !data) {
+        setProfessionals([]);
+      } else {
+        const filtered = data.filter((r: any) => {
+          const name = (r.name || '').toLowerCase();
+          return !name.includes('vikram') && !name.includes('rohan') && !name.includes('apex');
+        });
+        const mapped: Professional[] = filtered.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          role: r.role,
+          title: r.title,
+          rating: Number(r.rating || 5.0),
+          reviewCount: Number(r.review_count || 0),
+          experienceYears: Number(r.experience_years || 0),
+          pricePerSqFt: Number(r.price_per_sqft || 0),
+          avatar: r.avatar,
+          badge: r.badge,
+          location: r.location,
+          bio: r.bio,
+          specialties: r.specialties ?? [],
+          portfolio: r.portfolio ?? [],
+          phone: r.phone,
+          email: r.email,
+          completedProjectsCount: Number(r.completed_projects_count || 0),
+        }));
+        setProfessionals(mapped);
+      }
+      setProfsLoaded(true);
+    };
+    fetchProfessionals();
+  }, []);
+
+  // Fetch requirements from Supabase
+  const [requirements, setRequirements] = useState<ProjectRequirement[]>([]);
+  const [reqsLoaded, setReqsLoaded] = useState(false);
+
+  useEffect(() => {
+    const fetchRequirements = async () => {
+      const { data, error } = await supabase
+        .from('requirements')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error || !data) {
+        setRequirements([]);
+      } else {
+        const mapped: ProjectRequirement[] = data.map((r: any) => ({
+          id: r.id,
+          title: r.title,
+          category: r.category,
+          builtUpAreaSqFt: Number(r.built_up_area_sqft || 0),
+          location: r.location,
+          budgetRange: r.budget_range,
+          preferredTimeline: r.preferred_timeline,
+          architecturalStyle: r.architectural_style,
+          description: r.description,
+          status: r.status,
+          ownerId: r.owner_id,
+          createdAt: new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+        }));
+        setRequirements(mapped);
+      }
+      setReqsLoaded(true);
+    };
+    fetchRequirements();
+  }, []);
+
+  // Fetch proposals from Supabase
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [proposalsLoaded, setProposalsLoaded] = useState(false);
+
+  useEffect(() => {
+    const fetchProposals = async () => {
+      const { data, error } = await supabase
+        .from('proposals')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error || !data) {
+        setProposals([]);
+      } else {
+        const mapped: Proposal[] = data.map((r: any) => ({
+          id: r.id,
+          requirementId: r.requirement_id,
+          professionalId: r.professional_id,
+          professionalName: r.professional_name,
+          professionalRole: r.professional_role,
+          professionalAvatar: r.professional_avatar,
+          rating: Number(r.rating || 4.5),
+          priceEstimateTotal: Number(r.price_estimate_total || 0),
+          timelineEstimateMonths: Number(r.timeline_estimate_months || 0),
+          keyHighlights: r.key_highlights ?? [],
+          scopeBreakdown: r.scope_breakdown ?? [],
+          status: r.status as any,
+          createdAt: new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+        }));
+        setProposals(mapped);
+      }
+      setProposalsLoaded(true);
+    };
+    fetchProposals();
+  }, []);
+
+  const handleAddProposal = async (newProp: Proposal) => {
+    setProposals(prev => [newProp, ...prev]);
+    const dbRow = {
+      id: newProp.id,
+      requirement_id: newProp.requirementId,
+      professional_id: newProp.professionalId,
+      professional_name: newProp.professionalName,
+      professional_role: newProp.professionalRole,
+      professional_avatar: newProp.professionalAvatar,
+      rating: newProp.rating,
+      price_estimate_total: newProp.priceEstimateTotal,
+      timeline_estimate_months: newProp.timelineEstimateMonths,
+      key_highlights: newProp.keyHighlights,
+      scope_breakdown: newProp.scopeBreakdown,
+      status: newProp.status
+    };
+    const { error } = await supabase.from('proposals').insert(dbRow);
+    if (error) console.error('Failed to save proposal:', error.message);
   };
 
-  const handleAddRequirement = (newReq: ProjectRequirement) => {
-    setRequirements((prev) => {
-      const newList = [newReq, ...prev];
-      localStorage.setItem('arch_connect_requirements', JSON.stringify(newList));
-      return newList;
+  const handleUpdateProposalStatus = async (proposalId: string, status: 'Pending' | 'Accepted' | 'Shortlisted', requirementId?: string) => {
+    setProposals(prev => prev.map(p => p.id === proposalId ? { ...p, status } : p));
+    await supabase.from('proposals').update({ status }).eq('id', proposalId);
+
+    if (status === 'Accepted') {
+      const targetReqId = requirementId || proposals.find(p => p.id === proposalId)?.requirementId;
+      if (targetReqId) {
+        setRequirements(prev => prev.map(r => r.id === targetReqId ? { ...r, status: 'Matched' } : r));
+        await supabase.from('requirements').update({ status: 'Matched' }).eq('id', targetReqId);
+      }
+    }
+  };
+
+  const handleCompleteAndRateProject = async (requirementId: string, professionalId: string, rating: number, feedback: string) => {
+    // 1. Update local & DB requirement status to 'Completed'
+    setRequirements(prev => prev.map(r => r.id === requirementId ? { ...r, status: 'Completed' } : r));
+    await supabase.from('requirements').update({ status: 'Completed' }).eq('id', requirementId);
+
+    // 2. Retrieve professional's current scores
+    const { data: profData, error: fetchError } = await supabase
+      .from('professionals')
+      .select('rating, review_count, completed_projects_count')
+      .eq('id', professionalId)
+      .single();
+
+    if (!fetchError && profData) {
+      const currentRating = Number(profData.rating || 4.5);
+      const currentReviews = Number(profData.review_count || 0);
+      const currentCompleted = Number(profData.completed_projects_count || 0);
+
+      const newReviews = currentReviews + 1;
+      const newRating = parseFloat((((currentRating * currentReviews) + rating) / newReviews).toFixed(2));
+      const newCompleted = currentCompleted + 1;
+
+      // 3. Update local professionals state
+      setProfessionals(prev =>
+        prev.map(p =>
+          p.id === professionalId
+            ? { ...p, rating: newRating, reviewCount: newReviews, completedProjectsCount: newCompleted }
+            : p
+        )
+      );
+
+      // 4. Update professionals DB table
+      await supabase
+        .from('professionals')
+        .update({
+          rating: newRating,
+          review_count: newReviews,
+          completed_projects_count: newCompleted
+        })
+        .eq('id', professionalId);
+    }
+  };
+
+  const handleLogin = (user: AuthUser) => {
+    setCurrentUser(user);
+    if (user.role === 'professional') {
+      setActiveTab('prof-portal');
+    } else if (user.role === 'client') {
+      setActiveTab('client-portal');
+      if (pendingRequirement) {
+        const submitPending = async () => {
+          const reqId = `req-${Date.now()}`;
+          const dbRow = {
+            id: reqId,
+            title: pendingRequirement.title,
+            category: pendingRequirement.category,
+            built_up_area_sqft: Number(pendingRequirement.builtUpAreaSqFt),
+            location: pendingRequirement.location,
+            budget_range: pendingRequirement.budgetRange,
+            preferred_timeline: pendingRequirement.preferredTimeline,
+            architectural_style: pendingRequirement.architecturalStyle,
+            description: pendingRequirement.description,
+            status: 'Open for Bids',
+            owner_id: user.id,
+          };
+          const { error } = await supabase.from('requirements').insert(dbRow);
+          if (!error) {
+            setRequirements(prev => [
+              {
+                id: reqId,
+                title: pendingRequirement.title,
+                category: pendingRequirement.category,
+                builtUpAreaSqFt: Number(pendingRequirement.builtUpAreaSqFt),
+                location: pendingRequirement.location,
+                budgetRange: pendingRequirement.budgetRange,
+                preferredTimeline: pendingRequirement.preferredTimeline,
+                architecturalStyle: pendingRequirement.architecturalStyle,
+                description: pendingRequirement.description,
+                status: 'Open for Bids',
+                createdAt: 'Just now'
+              },
+              ...prev
+            ]);
+          }
+          setPendingRequirement(null);
+        };
+        submitPending();
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    localStorage.removeItem('admin_session');
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setActiveTab('home');
+  };
+
+  const handleSaveProfessional = async (updatedProf: Professional) => {
+    // Optimistic UI update
+    setProfessionals((prev) => {
+      const exists = prev.some((p) => p.id === updatedProf.id);
+      return exists
+        ? prev.map((p) => (p.id === updatedProf.id ? updatedProf : p))
+        : [updatedProf, ...prev];
     });
+
+    // Persist to Supabase
+    const dbRow = {
+      id: updatedProf.id,
+      name: updatedProf.name,
+      role: updatedProf.role,
+      title: updatedProf.title,
+      rating: updatedProf.rating,
+      review_count: updatedProf.reviewCount,
+      experience_years: updatedProf.experienceYears,
+      price_per_sqft: updatedProf.pricePerSqFt,
+      avatar: updatedProf.avatar,
+      badge: updatedProf.badge ?? null,
+      location: updatedProf.location,
+      bio: updatedProf.bio,
+      specialties: updatedProf.specialties,
+      portfolio: updatedProf.portfolio,
+      phone: updatedProf.phone,
+      email: updatedProf.email,
+      completed_projects_count: updatedProf.completedProjectsCount,
+      owner_id: currentUser?.id ?? null,
+    };
+    const { error } = await supabase.from('professionals').upsert(dbRow, { onConflict: 'id' });
+    if (error) console.error('Failed to save professional:', error.message);
+  };
+
+  const handleAddRequirement = async (newReq: ProjectRequirement) => {
+    // Optimistic UI update
+    setRequirements((prev) => [newReq, ...prev]);
+
+    // Persist to Supabase
+    const dbRow = {
+      id: newReq.id,
+      title: newReq.title,
+      category: newReq.category,
+      built_up_area_sqft: newReq.builtUpAreaSqFt,
+      location: newReq.location,
+      budget_range: newReq.budgetRange,
+      preferred_timeline: newReq.preferredTimeline,
+      architectural_style: newReq.architecturalStyle,
+      description: newReq.description,
+      status: newReq.status,
+      owner_id: currentUser?.id ?? null,
+    };
+    const { error } = await supabase.from('requirements').insert(dbRow);
+    if (error) console.error('Failed to save requirement:', error.message);
   };
 
   // Modals state
   const [isCostEstimatorOpen, setIsCostEstimatorOpen] = useState(false);
   const [isPostReqOpen, setIsPostReqOpen] = useState(false);
   const [isProposalMatrixOpen, setIsProposalMatrixOpen] = useState(false);
-  const [isProjectDetailsOpen, setIsProjectDetailsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+
+  const openAuth = (mode: 'login' | 'signup' = 'login') => {
+    setAuthModalMode(mode);
+    setIsAuthOpen(true);
+  };
 
   // Selected state
   const [selectedProfForModal, setSelectedProfForModal] = useState<Professional | null>(null);
@@ -135,34 +462,52 @@ export default function App() {
   const [contactSent, setContactSent] = useState(false);
 
   // Handle post requirement submission
-  const handlePostRequirement = (data: any) => {
-    // Generate new mock proposal for demonstration
-    const newProposal = {
-      id: `prop-${Date.now()}`,
-      requirementId: 'req-new',
-      professionalId: 'prof-1',
-      professionalName: 'Ar. Ananya Verma',
-      professionalRole: 'Architects' as const,
-      professionalAvatar:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuCS53da19ANzI9gGTjR_s8eShbFTJw0FnQ-v1JiJrk_Tbxs6A4ZbW_cCa2yZzjeq2AfWuR11c0mSC1yEKGboNmKEF3QwEE8qjSze9hsXLTbU-9t-eubUbGIl78F5OZhQKFbSO82Zx63Bro6AEdSAL8G3i81ZQ-hDeBN2dYmjwc-lp1Y9Tmh6s2TI7ISz42tK_zQG7NERqLTmT6MHnagyBxCxSFKtWUfTrHZGZnl0277NNaYAu5JEKM',
-      rating: 4.9,
-      priceEstimateTotal: data.builtUpAreaSqFt * 180,
-      timelineEstimateMonths: 7,
-      keyHighlights: [
-        'Custom 3D Elevation Blueprint & Permitting',
-        'Passive Climate Modeling & Material Selection',
-        'Direct Site Inspections'
-      ],
-      scopeBreakdown: [
-        { item: 'Architectural Blueprint', cost: Math.round(data.builtUpAreaSqFt * 80) },
-        { item: 'Structural & MEP Drawings', cost: Math.round(data.builtUpAreaSqFt * 60) },
-        { item: 'Site Supervision', cost: Math.round(data.builtUpAreaSqFt * 40) }
-      ],
-      status: 'Pending' as const
+  const handlePostRequirement = async (data: any) => {
+    if (!currentUser) {
+      setPendingRequirement(data);
+      setIsPostReqOpen(false);
+      openAuth('signup');
+      return;
+    }
+
+    const reqId = `req-${Date.now()}`;
+    const newReq: ProjectRequirement = {
+      id: reqId,
+      title: data.title,
+      category: data.category,
+      builtUpAreaSqFt: Number(data.builtUpAreaSqFt),
+      location: data.location,
+      budgetRange: data.budgetRange,
+      preferredTimeline: data.preferredTimeline,
+      architecturalStyle: data.architecturalStyle,
+      description: data.description,
+      status: 'Open for Bids',
+      ownerId: currentUser.id,
+      createdAt: 'Just now'
     };
 
-    setProposals((prev) => [newProposal, ...prev]);
-    setIsProposalMatrixOpen(true);
+    setRequirements((prev) => [newReq, ...prev]);
+
+    const dbRow = {
+      id: reqId,
+      title: data.title,
+      category: data.category,
+      built_up_area_sqft: Number(data.builtUpAreaSqFt),
+      location: data.location,
+      budget_range: data.budgetRange,
+      preferred_timeline: data.preferredTimeline,
+      architectural_style: data.architecturalStyle,
+      description: data.description,
+      status: 'Open for Bids',
+      owner_id: currentUser.id,
+    };
+
+    const { error } = await supabase.from('requirements').insert(dbRow);
+    if (error) {
+      console.error('Failed to save requirement to DB:', error.message);
+    } else {
+      setActiveTab('client-portal');
+    }
   };
 
   const handlePostReqWithEstimate = (inputs: CostEstimateInput, total: number) => {
@@ -205,6 +550,45 @@ export default function App() {
     setContactSending(false);
     setContactSent(true);
   };
+
+  // ------------------------------------------------------------
+  // AUTH GATE — show LandingPage until user is logged in
+  // ------------------------------------------------------------
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#FDF8F0] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg border border-[#4A3728]/20">
+            <img src="/logo.jpg" alt="Arch-Connect" className="w-full h-full object-cover" />
+          </div>
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map(i => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full bg-[#9B7B5A] animate-bounce"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 font-medium">Loading Arch-Connect…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <>
+        <LandingPage onOpenAuth={openAuth} />
+        <AuthModal
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          onLogin={handleLogin}
+          defaultMode={authModalMode}
+        />
+      </>
+    );
+  }
 
   // ------------------------------------------------------------
   // RENDERING CONTACT PAGE AS A FULL-SCREEN DEDICATED VIEW
@@ -432,35 +816,81 @@ export default function App() {
     <div className="min-h-screen bg-[#FDF8F0] text-[#2C1F14] font-sans antialiased flex flex-col justify-between selection:bg-[#4A3728] selection:text-white">
       {/* Navigation Header */}
       <Header
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      onOpenPostRequirement={() => setIsPostReqOpen(true)}
-      onOpenCostEstimator={() => setIsCostEstimatorOpen(true)}
-      onOpenAuth={() => setIsAuthOpen(true)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onOpenPostRequirement={() => setIsPostReqOpen(true)}
+        onOpenCostEstimator={() => setIsCostEstimatorOpen(true)}
+        onOpenAuth={() => openAuth('login')}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 pt-20">
         {activeTab === 'prof-portal' ? (
-          <ProfessionalPortal
-            professionals={professionals}
-            onSaveProfessional={handleSaveProfessional}
-            onSelectViewDirectory={() => setActiveTab('professionals')}
-          />
+          /* Role guard: only professional or admin */
+          currentUser && (currentUser.role === 'professional' || currentUser.role === 'admin') ? (
+            <ProfessionalPortal
+              professionals={professionals}
+              requirements={requirements}
+              proposals={proposals}
+              onSaveProfessional={handleSaveProfessional}
+              onSelectViewDirectory={() => setActiveTab('professionals')}
+              onAddProposal={handleAddProposal}
+              currentUser={currentUser}
+            />
+          ) : (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center px-4">
+              <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center">
+                <svg className="w-8 h-8 text-amber-700" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+              </div>
+              <h2 className="font-display font-bold text-2xl text-[#4A3728]">Professional Access Only</h2>
+              <p className="text-slate-500 max-w-sm text-sm">The Professional Hub is available only to registered Architects, Engineers, and Designers. Please log in or sign up as a Professional to continue.</p>
+              <button onClick={() => setIsAuthOpen(true)} className="mt-2 bg-[#4A3728] text-white font-bold text-sm px-7 py-3 rounded-full hover:bg-[#6B5040] transition-all shadow-md">Log In / Sign Up as Professional</button>
+            </div>
+          )
         ) : activeTab === 'client-portal' ? (
-          <ClientPortal
-            requirements={requirements}
-            professionals={professionals}
-            onAddRequirement={handleAddRequirement}
-            onOpenCostEstimator={() => setIsCostEstimatorOpen(true)}
-            onOpenProposalMatrix={() => setIsProposalMatrixOpen(true)}
-            onBrowseProfessionals={() => setActiveTab('professionals')}
-            onRequestQuote={(prof) => {
-              setSelectedProfForModal(prof);
-              setIsPostReqOpen(true);
-            }}
-            onSelectProfModal={(prof) => setSelectedProfForModal(prof)}
-          />
+          /* Role guard: only client or admin */
+          currentUser && (currentUser.role === 'client' || currentUser.role === 'admin') ? (
+            <ClientPortal
+              requirements={requirements}
+              professionals={professionals}
+              proposals={proposals}
+              currentUser={currentUser}
+              onAddRequirement={handleAddRequirement}
+              onOpenCostEstimator={() => setIsCostEstimatorOpen(true)}
+              onOpenProposalMatrix={() => setIsProposalMatrixOpen(true)}
+              onBrowseProfessionals={() => setActiveTab('professionals')}
+              onRequestQuote={(prof) => {
+                setSelectedProfForModal(prof);
+                setIsPostReqOpen(true);
+              }}
+              onSelectProfModal={(prof) => setSelectedProfForModal(prof)}
+              onUpdateProposalStatus={handleUpdateProposalStatus}
+              onCompleteAndRateProject={handleCompleteAndRateProject}
+            />
+          ) : (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center px-4">
+              <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center">
+                <svg className="w-8 h-8 text-blue-700" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+              </div>
+              <h2 className="font-display font-bold text-2xl text-[#4A3728]">User Access Only</h2>
+              <p className="text-slate-500 max-w-sm text-sm">The User Portal is available only to registered Users. Please log in or sign up as a User to post requirements and find your perfect match.</p>
+              <button onClick={() => setIsAuthOpen(true)} className="mt-2 bg-[#4A3728] text-white font-bold text-sm px-7 py-3 rounded-full hover:bg-[#6B5040] transition-all shadow-md">Log In / Sign Up as User</button>
+            </div>
+          )
+        ) : activeTab === 'admin-panel' ? (
+          currentUser && currentUser.role === 'admin' ? (
+            <AdminPanel />
+          ) : (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center px-4">
+              <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center animate-bounce">
+                <svg className="w-8 h-8 text-red-700" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+              </div>
+              <h2 className="font-display font-bold text-2xl text-[#4A3728]">Admin Access Only</h2>
+              <p className="text-slate-500 max-w-sm text-sm">This portal is restricted to system administrators. Please log in with correct admin credentials.</p>
+            </div>
+          )
         ) : (
           <>
         {/* HERO SECTION */}
@@ -554,192 +984,6 @@ export default function App() {
         {/* SCROLL ANIMATION SECTION */}
         <ScrollAnimationHero onScrollComplete={() => setIsPostReqOpen(true)} />
 
-        {/* SERVICES SECTION */}
-        <section id="services" className="py-20 bg-white border-y border-slate-200/60">
-          <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-12">
-            <div className="text-center max-w-2xl mx-auto space-y-3">
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#4A3728]">
-                Our Services
-              </h2>
-              <p className="text-slate-600 text-base">
-                Everything you need to build or renovate, guided by industry-leading professionals.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Card 1: Architects */}
-              <div className="bg-[#FDF8F0] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
-                <div>
-                  <div className="w-14 h-14 bg-[#F0E6D3] rounded-2xl flex items-center justify-center text-[#4A3728] mb-6 shadow-2xs">
-                    <Compass className="w-7 h-7" />
-                  </div>
-                  <h3 className="font-display font-bold text-xl text-[#4A3728] mb-2.5">
-                    Architects
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
-                    Visionary designs mapped to precise structural blueprints for modern living.
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleCategoryExplore('Architects')}
-                  className="text-[#4A3728] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#9B7B5A] transition-colors cursor-pointer"
-                >
-                  <span>Explore</span>
-                  <ArrowRight className="w-4 h-4 text-[#9B7B5A] group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-
-              {/* Card 2: Interior Designers */}
-              <div className="bg-[#FDF8F0] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
-                <div>
-                  <div className="w-14 h-14 bg-[#EDE3D3] rounded-2xl flex items-center justify-center text-[#9B7B5A] mb-6 shadow-2xs">
-                    <Armchair className="w-7 h-7" />
-                  </div>
-                  <h3 className="font-display font-bold text-xl text-[#4A3728] mb-2.5">
-                    Interior Designers
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
-                    Transform raw spaces into tactile, sophisticated environments reflecting your style.
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleCategoryExplore('Interior Designers')}
-                  className="text-[#4A3728] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#9B7B5A] transition-colors cursor-pointer"
-                >
-                  <span>Explore</span>
-                  <ArrowRight className="w-4 h-4 text-[#9B7B5A] group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-
-              {/* Card 3: Civil Engineers */}
-              <div className="bg-[#FDF8F0] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
-                <div>
-                  <div className="w-14 h-14 bg-[#E8DDD0] rounded-2xl flex items-center justify-center text-[#4A3020] mb-6 shadow-2xs">
-                    <Wrench className="w-7 h-7" />
-                  </div>
-                  <h3 className="font-display font-bold text-xl text-[#4A3728] mb-2.5">
-                    Civil Engineers
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
-                    Ensuring grounded stability, safety, and structural integrity for every project.
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleCategoryExplore('Civil Engineers')}
-                  className="text-[#4A3728] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#9B7B5A] transition-colors cursor-pointer"
-                >
-                  <span>Explore</span>
-                  <ArrowRight className="w-4 h-4 text-[#9B7B5A] group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-
-              {/* Card 4: Material Providers */}
-              <div className="bg-[#FDF8F0] rounded-2xl p-6 shadow-xs hover-lift border border-slate-200/80 flex flex-col justify-between items-start h-full group">
-                <div>
-                  <div className="w-14 h-14 bg-[#EDE3D8] rounded-2xl flex items-center justify-center text-slate-800 mb-6 shadow-2xs">
-                    <Package className="w-7 h-7" />
-                  </div>
-                  <h3 className="font-display font-bold text-xl text-[#4A3728] mb-2.5">
-                    Material Providers
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
-                    Source premium timber, stone, and glass directly from trusted industry suppliers.
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleCategoryExplore('Material Providers')}
-                  className="text-[#4A3728] font-bold text-sm flex items-center space-x-1.5 group-hover:text-[#9B7B5A] transition-colors cursor-pointer"
-                >
-                  <span>Explore</span>
-                  <ArrowRight className="w-4 h-4 text-[#9B7B5A] group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* HOW IT WORKS SECTION */}
-        <section id="how-it-works" className="py-20 bg-[#FDF8F0]">
-          <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-16">
-            <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#4A3728] text-center">
-              How It Works
-            </h2>
-
-            <div className="relative grid grid-cols-1 md:grid-cols-4 gap-8 items-start">
-              {/* Connecting Line background on desktop */}
-              <div className="hidden md:block absolute top-12 left-[12%] right-[12%] h-0.5 bg-slate-300/60 z-0" />
-
-              {/* Step 1 */}
-              <button
-                onClick={() => setIsPostReqOpen(true)}
-                className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
-              >
-                <div className="w-24 h-24 rounded-full bg-white border-4 border-[#FDF8F0] shadow-lg flex items-center justify-center text-[#4A3728] mb-5 group-hover:scale-110 transition-transform">
-                  <FileEdit className="w-10 h-10 text-[#4A3728]" />
-                </div>
-                <h4 className="font-display font-bold text-lg text-[#4A3728] mb-1.5 group-hover:text-[#9B7B5A]">
-                  1. Post Requirement
-                </h4>
-                <p className="text-xs text-slate-600 max-w-xs">
-                  Detail your vision, budget, and timeline.
-                </p>
-              </button>
-
-              {/* Step 2 */}
-              <button
-                onClick={() => handleCategoryExplore('All')}
-                className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
-              >
-                <div className="w-24 h-24 rounded-full bg-white border-4 border-[#FDF8F0] shadow-lg flex items-center justify-center text-[#4A3728] mb-5 group-hover:scale-110 transition-transform">
-                  <UserPlus className="w-10 h-10 text-[#4A3728]" />
-                </div>
-                <h4 className="font-display font-bold text-lg text-[#4A3728] mb-1.5 group-hover:text-[#9B7B5A]">
-                  2. Get Matched
-                </h4>
-                <p className="text-xs text-slate-600 max-w-xs">
-                  We suggest top-rated professionals nearby.
-                </p>
-              </button>
-
-              {/* Step 3 */}
-              <button
-                onClick={() => setIsProposalMatrixOpen(true)}
-                className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
-              >
-                <div className="w-24 h-24 rounded-full bg-white border-4 border-[#FDF8F0] shadow-lg flex items-center justify-center text-[#4A3728] mb-5 group-hover:scale-110 transition-transform">
-                  <ArrowRightLeft className="w-10 h-10 text-[#4A3728]" />
-                </div>
-                <h4 className="font-display font-bold text-lg text-[#4A3728] mb-1.5 group-hover:text-[#9B7B5A]">
-                  3. Compare Proposals
-                </h4>
-                <p className="text-xs text-slate-600 max-w-xs">
-                  Review portfolios, quotes, and ratings.
-                </p>
-              </button>
-
-              {/* Step 4 */}
-              <button
-                onClick={() => setIsProjectDetailsOpen(true)}
-                className="relative z-10 flex flex-col items-center text-center group cursor-pointer"
-              >
-                <div className="w-24 h-24 rounded-full bg-[#9B7B5A] border-4 border-[#FDF8F0] shadow-lg flex items-center justify-center text-white mb-5 group-hover:scale-110 transition-transform">
-                  <Handshake className="w-10 h-10 text-white" />
-                </div>
-                <h4 className="font-display font-bold text-lg text-[#4A3728] mb-1.5 group-hover:text-[#9B7B5A]">
-                  4. Book & Build
-                </h4>
-                <p className="text-xs text-slate-600 max-w-xs">
-                  Hire securely and track project progress.
-                </p>
-              </button>
-            </div>
-          </div>
-        </section>
-
         {/* INTERACTIVE COST ESTIMATOR PROMO BANNER */}
         <section className="py-12 bg-gradient-to-r from-[#4A3728] via-[#6B5040] to-[#4A3728] text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -800,14 +1044,9 @@ export default function App() {
         isOpen={isProposalMatrixOpen}
         onClose={() => setIsProposalMatrixOpen(false)}
         proposals={proposals}
-        onAcceptProposal={(id) => console.log('Accepted proposal:', id)}
+        onAcceptProposal={(id) => handleUpdateProposalStatus(id, 'Accepted')}
       />
 
-      <ProjectDetailsModal
-        isOpen={isProjectDetailsOpen}
-        onClose={() => setIsProjectDetailsOpen(false)}
-        project={MOCK_ACTIVE_PROJECT}
-      />
 
       <ProfessionalDetailModal
         isOpen={selectedProfForModal !== null}
@@ -821,6 +1060,8 @@ export default function App() {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
+        onLogin={handleLogin}
+        defaultMode={authModalMode}
       />
     </div>
   );
