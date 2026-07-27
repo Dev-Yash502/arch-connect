@@ -55,7 +55,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
   const [title, setTitle] = useState('');
   const [experienceYears, setExperienceYears] = useState(5);
   const [pricePerSqFt, setPricePerSqFt] = useState(100);
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState('Dehradun');
   const [bio, setBio] = useState('');
   const [specialtiesText, setSpecialtiesText] = useState('');
   const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80');
@@ -70,7 +70,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
   const [projImage, setProjImage] = useState('');
   const [projDesc, setProjDesc] = useState('');
   const [projArea, setProjArea] = useState<number>(2500);
-  const [projLocation, setProjLocation] = useState('Dehradun, India');
+  const [projLocation, setProjLocation] = useState('Dehradun');
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -96,7 +96,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
       setTitle('');
       setExperienceYears(5);
       setPricePerSqFt(100);
-      setLocation('');
+      setLocation('Dehradun');
       setBio('');
       setSpecialtiesText('');
       setAvatar('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80');
@@ -189,10 +189,10 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
         </div>
 
         {/* Main Tab Switcher */}
-        <div className="flex gap-2 bg-slate-200/50 p-1 rounded-2xl w-fit">
+        <div className="flex flex-row overflow-x-auto max-w-full sm:w-fit gap-2 bg-slate-200/50 p-1 rounded-2xl no-scrollbar">
           <button
             onClick={() => setActivePortalTab('portfolio')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
               activePortalTab === 'portfolio'
                 ? 'bg-[#4A3728] text-white shadow-md'
                 : 'text-slate-600 hover:text-[#4A3728]'
@@ -203,7 +203,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
           </button>
           <button
             onClick={() => setActivePortalTab('requests')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all relative ${
+            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all relative ${
               activePortalTab === 'requests'
                 ? 'bg-[#4A3728] text-white shadow-md'
                 : 'text-slate-600 hover:text-[#4A3728]'
@@ -212,7 +212,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
             <Inbox className="w-4 h-4" />
             Client Requests
             {openRequirements.length > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center animate-pulse">
                 {openRequirements.length}
               </span>
             )}
@@ -446,7 +446,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
                   <input
                     type="number"
                     required
-                    value={pricePerSqFt}
+                    value={pricePerSqFt === 0 ? '' : pricePerSqFt}
                     onChange={(e) => setPricePerSqFt(Number(e.target.value))}
                     placeholder="180"
                     className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
@@ -458,7 +458,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
                   <input
                     type="number"
                     required
-                    value={experienceYears}
+                    value={experienceYears === 0 ? '' : experienceYears}
                     onChange={(e) => setExperienceYears(Number(e.target.value))}
                     placeholder="12"
                     className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
@@ -467,14 +467,15 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1">City / Location</label>
-                  <input
-                    type="text"
-                    required
+                  <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Dehradun, India"
                     className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                  />
+                  >
+                    <option value="Dehradun">Dehradun</option>
+                    <option value="Roorkee">Roorkee</option>
+                    <option value="Delhi">Delhi</option>
+                  </select>
                 </div>
               </div>
 
@@ -606,7 +607,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
                       <input
                         type="number"
                         required
-                        value={projArea}
+                        value={projArea === 0 ? '' : projArea}
                         onChange={(e) => setProjArea(Number(e.target.value))}
                         placeholder="3500"
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
@@ -650,13 +651,15 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
 
                   <div>
                     <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">Location</label>
-                    <input
-                      type="text"
+                    <select
                       value={projLocation}
                       onChange={(e) => setProjLocation(e.target.value)}
-                      placeholder="Dehradun, India"
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
-                    />
+                    >
+                      <option value="Dehradun">Dehradun</option>
+                      <option value="Roorkee">Roorkee</option>
+                      <option value="Delhi">Delhi</option>
+                    </select>
                   </div>
 
                   <div>

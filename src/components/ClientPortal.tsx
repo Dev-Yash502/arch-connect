@@ -72,7 +72,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<ProfessionalCategory | 'All-in-One Turnkey'>('Architects');
   const [builtUpAreaSqFt, setBuiltUpAreaSqFt] = useState<number>(2400);
-  const [location, setLocation] = useState('Dehradun, India');
+  const [location, setLocation] = useState('Dehradun');
   const [budgetRange, setBudgetRange] = useState('₹45L - ₹65L');
   const [preferredTimeline, setPreferredTimeline] = useState('6 - 8 Months');
   const [architecturalStyle, setArchitecturalStyle] = useState('Modern Minimalist Villa');
@@ -206,7 +206,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                   <input
                     type="number"
                     required
-                    value={builtUpAreaSqFt}
+                    value={builtUpAreaSqFt === 0 ? '' : builtUpAreaSqFt}
                     onChange={(e) => setBuiltUpAreaSqFt(Number(e.target.value))}
                     placeholder="2500"
                     className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
@@ -215,14 +215,15 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Location / City</label>
-                  <input
-                    type="text"
-                    required
+                  <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Dehradun, Uttarakhand"
                     className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                  />
+                  >
+                    <option value="Dehradun">Dehradun</option>
+                    <option value="Roorkee">Roorkee</option>
+                    <option value="Delhi">Delhi</option>
+                  </select>
                 </div>
 
                 <div>

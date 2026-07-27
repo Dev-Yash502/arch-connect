@@ -133,50 +133,53 @@ export default function App() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [profsLoaded, setProfsLoaded] = useState(false);
 
+  const fetchProfessionals = async () => {
+    const { data, error } = await supabase
+      .from('professionals')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error || !data) {
+      setProfessionals([]);
+    } else {
+      const filtered = data.filter((r: any) => {
+        const name = (r.name || '').toLowerCase();
+        return !name.includes('vikram') && !name.includes('rohan') && !name.includes('apex');
+      });
+      const mapped: Professional[] = filtered.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        role: r.role,
+        title: r.title,
+        rating: Number(r.rating || 5.0),
+        reviewCount: Number(r.review_count || 0),
+        experienceYears: Number(r.experience_years || 0),
+        pricePerSqFt: Number(r.price_per_sqft || 0),
+        avatar: r.avatar,
+        badge: r.badge,
+        location: r.location,
+        bio: r.bio,
+        specialties: r.specialties ?? [],
+        portfolio: r.portfolio ?? [],
+        phone: r.phone,
+        email: r.email,
+        completedProjectsCount: Number(r.completed_projects_count || 0),
+      }));
+      setProfessionals(mapped);
+    }
+    setProfsLoaded(true);
+  };
+
   useEffect(() => {
-    const fetchProfessionals = async () => {
+    const runCleanupAndFetch = async () => {
       // Clean up old mock database rows (Vikram Malhotra, Rohan Kapoor, Apex Material Solutions)
       await supabase
         .from('professionals')
         .delete()
         .or('name.ilike.%Vikram%,name.ilike.%Rohan%,name.ilike.%Apex%');
-
-      const { data, error } = await supabase
-        .from('professionals')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error || !data) {
-        setProfessionals([]);
-      } else {
-        const filtered = data.filter((r: any) => {
-          const name = (r.name || '').toLowerCase();
-          return !name.includes('vikram') && !name.includes('rohan') && !name.includes('apex');
-        });
-        const mapped: Professional[] = filtered.map((r: any) => ({
-          id: r.id,
-          name: r.name,
-          role: r.role,
-          title: r.title,
-          rating: Number(r.rating || 5.0),
-          reviewCount: Number(r.review_count || 0),
-          experienceYears: Number(r.experience_years || 0),
-          pricePerSqFt: Number(r.price_per_sqft || 0),
-          avatar: r.avatar,
-          badge: r.badge,
-          location: r.location,
-          bio: r.bio,
-          specialties: r.specialties ?? [],
-          portfolio: r.portfolio ?? [],
-          phone: r.phone,
-          email: r.email,
-          completedProjectsCount: Number(r.completed_projects_count || 0),
-        }));
-        setProfessionals(mapped);
-      }
-      setProfsLoaded(true);
+      await fetchProfessionals();
     };
-    fetchProfessionals();
+    runCleanupAndFetch();
   }, []);
 
   // Fetch requirements from Supabase
@@ -411,7 +414,11 @@ export default function App() {
       owner_id: currentUser?.id ?? null,
     };
     const { error } = await supabase.from('professionals').upsert(dbRow, { onConflict: 'id' });
-    if (error) console.error('Failed to save professional:', error.message);
+    if (error) {
+      console.error('Failed to save professional:', error.message);
+    } else {
+      await fetchProfessionals();
+    }
   };
 
   const handleAddRequirement = async (newReq: ProjectRequirement) => {
@@ -813,7 +820,7 @@ export default function App() {
   // ORIGINAL MARKETPLACE RENDERING
   // ------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-[#FDF8F0] text-[#2C1F14] font-sans antialiased flex flex-col justify-between selection:bg-[#4A3728] selection:text-white">
+    <div className="min-h-screen bg-[#FDF8F0] text-[#2C1F14] font-sans antialiased flex flex-col justify-between selection:bg-[#4A3728] selection:text-white overflow-x-hidden">
       {/* Navigation Header */}
       <Header
         activeTab={activeTab}
@@ -826,7 +833,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-20 overflow-x-hidden">
         {activeTab === 'prof-portal' ? (
           /* Role guard: only professional or admin */
           currentUser && (currentUser.role === 'professional' || currentUser.role === 'admin') ? (

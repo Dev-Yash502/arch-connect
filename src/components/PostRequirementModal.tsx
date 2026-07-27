@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { X, Send, CheckCircle2, Sparkles, Building2, ShieldCheck, MapPin, Calendar } from 'lucide-react';
 import { ProjectRequirement, ProfessionalCategory } from '../types';
 
@@ -21,7 +21,7 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
       : 'Modern 3-Story Residence Project',
     category: 'Architects' as ProfessionalCategory | 'All-in-One Turnkey',
     builtUpAreaSqFt: initialEstimate ? initialEstimate.areaSqFt : 3500,
-    location: 'Dehradun, Uttarakhand, India',
+    location: 'Dehradun',
     budgetRange: initialEstimate
       ? `₹${Math.round(initialEstimate.totalCost * 0.9).toLocaleString('en-IN')} - ₹${Math.round(initialEstimate.totalCost * 1.1).toLocaleString('en-IN')}`
       : '₹50,00,000 - ₹85,00,000',
@@ -130,7 +130,7 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                 <input
                   type="number"
                   required
-                  value={formData.builtUpAreaSqFt}
+                  value={formData.builtUpAreaSqFt === 0 ? '' : formData.builtUpAreaSqFt}
                   onChange={(e) => setFormData({ ...formData, builtUpAreaSqFt: Number(e.target.value) })}
                   className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 />
@@ -145,14 +145,15 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                 </label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    required
+                  <select
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     className="w-full pl-9 pr-3 py-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                    placeholder="City (e.g. Delhi, Dehradun, Roorkee)"
-                  />
+                  >
+                    <option value="Dehradun">Dehradun</option>
+                    <option value="Roorkee">Roorkee</option>
+                    <option value="Delhi">Delhi</option>
+                  </select>
                 </div>
               </div>
 
