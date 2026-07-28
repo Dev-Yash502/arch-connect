@@ -75,7 +75,20 @@ function SocialBtn({ href, icon: Icon, bgColor, textColor }: SocialBtnProps) {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTabState] = useState(() => {
+    const hash = window.location.hash.replace('#', '');
+    const validTabs = ['home', 'professionals', 'client-portal', 'prof-portal', 'admin-panel'];
+    return validTabs.includes(hash) ? hash : 'home';
+  });
+
+  const setActiveTab = (tab: string, pushHistory = true) => {
+    setActiveTabState(tab);
+    if (pushHistory) {
+      if (window.location.hash !== `#${tab}`) {
+        window.history.pushState({ tab }, '', `#${tab}`);
+      }
+    }
+  };
 
   // --- Auth / RBAC State (Supabase Auth) ---
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -84,6 +97,29 @@ export default function App() {
 
   // On mount: restore session from Supabase + listen for auth changes
   useEffect(() => {
+    // Back button / Popstate history listener
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.tab) {
+        setActiveTabState(event.state.tab);
+      } else {
+        const hash = window.location.hash.replace('#', '');
+        const validTabs = ['home', 'professionals', 'client-portal', 'prof-portal', 'admin-panel'];
+        if (validTabs.includes(hash)) {
+          setActiveTabState(hash);
+        } else {
+          setActiveTabState('home');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    // Initialize initial state in history
+    const hash = window.location.hash.replace('#', '');
+    const validTabs = ['home', 'professionals', 'client-portal', 'prof-portal', 'admin-panel'];
+    const initialTab = validTabs.includes(hash) ? hash : 'home';
+    window.history.replaceState({ tab: initialTab }, '', `#${initialTab}`);
+
     // Restore admin session from localStorage if present
     const savedAdmin = localStorage.getItem('admin_session');
     if (savedAdmin) {
@@ -97,7 +133,19 @@ export default function App() {
       }
     }
 
-    // Restore existing session
+    // Restore user session from localStorage if present for instant login
+    const savedUser = localStorage.getItem('archconnect_user_session');
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        setCurrentUser(user);
+        setAuthLoading(false);
+      } catch (err) {
+        localStorage.removeItem('archconnect_user_session');
+      }
+    }
+
+    // Restore existing session from Supabase
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         const { data: profile } = await supabase
@@ -106,14 +154,22 @@ export default function App() {
           .eq('id', session.user.id)
           .single();
         if (profile) {
-          setCurrentUser({
+          const authUser = {
             id: session.user.id,
             name: profile.name,
             email: session.user.email!,
             role: profile.role,
             joinedAt: profile.joined_at,
-          });
+          };
+          setCurrentUser(authUser);
+          localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
+        } else {
+          setCurrentUser(null);
+          localStorage.removeItem('archconnect_user_session');
         }
+      } else {
+        setCurrentUser(null);
+        localStorage.removeItem('archconnect_user_session');
       }
       setAuthLoading(false);
     });
@@ -122,11 +178,32 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         setCurrentUser(null);
+        localStorage.removeItem('archconnect_user_session');
         setActiveTab('home');
+      } else if (session?.user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('name, role, joined_at')
+          .eq('id', session.user.id)
+          .single();
+        if (profile) {
+          const authUser = {
+            id: session.user.id,
+            name: profile.name,
+            email: session.user.email!,
+            role: profile.role,
+            joinedAt: profile.joined_at,
+          };
+          setCurrentUser(authUser);
+          localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   // Fetch professionals from Supabase (falls back to mock data for seeding)
@@ -330,6 +407,7 @@ export default function App() {
 
   const handleLogin = (user: AuthUser) => {
     setCurrentUser(user);
+    localStorage.setItem('archconnect_user_session', JSON.stringify(user));
     if (user.role === 'professional') {
       setActiveTab('prof-portal');
     } else if (user.role === 'client') {
@@ -378,6 +456,7 @@ export default function App() {
 
   const handleLogout = async () => {
     localStorage.removeItem('admin_session');
+    localStorage.removeItem('archconnect_user_session');
     await supabase.auth.signOut();
     setCurrentUser(null);
     setActiveTab('home');
