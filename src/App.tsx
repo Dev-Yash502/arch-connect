@@ -85,7 +85,12 @@ export default function App() {
     setActiveTabState(tab);
     if (pushHistory) {
       if (window.location.hash !== `#${tab}`) {
-        window.history.pushState({ tab }, '', `#${tab}`);
+        try {
+          window.history.pushState({ tab }, '', `#${tab}`);
+        } catch (e) {
+          // Fallback to location hash change if history API access throws a SecurityError (e.g. in iframe previews)
+          window.location.hash = `#${tab}`;
+        }
       }
     }
   };
@@ -118,7 +123,12 @@ export default function App() {
     const hash = window.location.hash.replace('#', '');
     const validTabs = ['home', 'professionals', 'client-portal', 'prof-portal', 'admin-panel'];
     const initialTab = validTabs.includes(hash) ? hash : 'home';
-    window.history.replaceState({ tab: initialTab }, '', `#${initialTab}`);
+    try {
+      window.history.replaceState({ tab: initialTab }, '', `#${initialTab}`);
+    } catch (e) {
+      // Fallback
+      window.location.hash = `#${initialTab}`;
+    }
 
     // Restore admin session from localStorage if present
     const savedAdmin = localStorage.getItem('admin_session');
