@@ -21,7 +21,9 @@ import {
   ShieldCheck,
   Star,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Eye,
+  MessageSquare
 } from 'lucide-react';
 import { ClientEngineerMatcher } from './ClientEngineerMatcher';
 import { ProjectRequirement, ProfessionalCategory, Professional, Proposal, AuthUser } from '../types';
@@ -484,26 +486,21 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                                           <span>Project Completed & Closed</span>
                                         </div>
                                       ) : isAccepted ? (
-                                        <div className="w-full space-y-2">
+                                        <div className="w-full space-y-2.5">
                                           <div className="flex items-center space-x-1.5 text-xs font-bold text-emerald-800 bg-emerald-100/80 px-3 py-1.5 rounded-xl">
                                             <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                                            <span>Proposal Accepted & Contact Unlocked</span>
+                                            <span>Proposal Approved</span>
                                           </div>
 
-                                          <div className="grid grid-cols-2 gap-2 text-xs">
+                                          <div className="text-xs">
                                             <a
-                                              href={`tel:${profDetails?.phone || '+91 98765 43210'}`}
-                                              className="px-3 py-2 bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center space-x-1.5 hover:bg-emerald-800 transition-colors"
+                                              href={`https://wa.me/917782869911?text=Hello! I have approved your proposal on Arch-Connect for my project: ${encodeURIComponent(req.title)}. Let's discuss the next steps!`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="w-full px-3 py-3 bg-[#25D366] hover:bg-[#20ba56] text-white rounded-xl font-bold flex items-center justify-center space-x-2 transition-colors shadow-sm"
                                             >
-                                              <Phone className="w-3.5 h-3.5" />
-                                              <span>{profDetails?.phone || '+91 98765 43210'}</span>
-                                            </a>
-                                            <a
-                                              href={`mailto:${profDetails?.email || 'contact@expert.in'}`}
-                                              className="px-3 py-2 bg-[#4A3728] text-white rounded-xl font-bold flex items-center justify-center space-x-1.5 hover:bg-[#6B5040] transition-colors"
-                                            >
-                                              <Mail className="w-3.5 h-3.5" />
-                                              <span>Send Email</span>
+                                              <MessageSquare className="w-4 h-4" />
+                                              <span>Chat on WhatsApp (+91 77828 69911)</span>
                                             </a>
                                           </div>
 
@@ -517,24 +514,36 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                                               setRatingFeedback('');
                                               setRatingModalOpen(true);
                                             }}
-                                            className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer shadow-sm"
+                                            className="w-full py-2.5 bg-[#4A3728] hover:bg-[#6B5040] text-white rounded-xl font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer shadow-sm text-xs"
                                           >
                                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
                                             <span>Complete Project & Rate Expert</span>
                                           </button>
                                         </div>
                                       ) : (
-                                        <button
-                                          onClick={() => {
-                                            if (onUpdateProposalStatus) {
-                                              onUpdateProposalStatus(prop.id, 'Accepted', req.id);
-                                            }
-                                          }}
-                                          className="w-full py-2 bg-[#4A3728] hover:bg-[#6B5040] text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center space-x-1.5"
-                                        >
-                                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                          <span>Accept Proposal & Unlock Contact</span>
-                                        </button>
+                                        <div className="w-full flex flex-col sm:flex-row gap-2">
+                                          {profDetails && (
+                                            <button
+                                              type="button"
+                                              onClick={() => onSelectProfModal(profDetails)}
+                                              className="flex-1 py-2.5 bg-white hover:bg-slate-50 text-[#4A3728] border border-slate-300 font-bold text-xs rounded-xl transition-all flex items-center justify-center space-x-1.5"
+                                            >
+                                              <Eye className="w-3.5 h-3.5" />
+                                              <span>View Portfolio</span>
+                                            </button>
+                                          )}
+                                          <button
+                                            onClick={() => {
+                                              if (onUpdateProposalStatus) {
+                                                onUpdateProposalStatus(prop.id, 'Accepted', req.id);
+                                              }
+                                            }}
+                                            className="flex-1 py-2.5 bg-[#4A3728] hover:bg-[#6B5040] text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center space-x-1.5"
+                                          >
+                                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                            <span>Approve & Connect</span>
+                                          </button>
+                                        </div>
                                       )}
                                     </div>
                                   </div>
