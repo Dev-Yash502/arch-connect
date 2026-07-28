@@ -305,7 +305,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
                 Verify Your Email
               </h3>
               <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
-                We've sent a 6-digit verification code to <strong className="text-[#4A3728]">{email}</strong>. Please enter the code below.
+                We've sent a verification link and code to <strong className="text-[#4A3728]">{email}</strong>.
+                <br />
+                <span className="font-bold text-[#9B7B5A]">Click the confirmation link</span> in your email to verify instantly, or enter the 6-digit code below if you have configured SMTP.
               </p>
             </div>
 
