@@ -33,6 +33,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [showOtpScreen, setShowOtpScreen] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpType, setOtpType] = useState<'signup' | 'email'>('signup');
 
   if (!isOpen) return null;
 
@@ -41,6 +44,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
     setPassword('');
     setName('');
     setError('');
+    setShowOtpScreen(false);
+    setOtpCode('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,7 +104,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
         }
 
         // 3b. No session → email confirmation still ON
-        setError('✅ Account created! Please check your email inbox for a confirmation link, then log in.');
+        setOtpType('signup');
+        setShowOtpScreen(true);
+        setError('✅ Sign up successful! We have sent a 6-digit confirmation code to your email. Please verify below.');
         setLoading(false);
         return;
 
@@ -130,10 +137,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
         });
 
         if (signInError) {
-          // Make Supabase errors human-friendly
           const msg = signInError.message;
-          if (msg.includes('Email not confirmed'))
-            throw new Error('Email is not confirmed yet. Please check your inbox for the confirmation link.');
+          if (msg.includes('Email not confirmed') || msg.toLowerCase().includes('confirm')) {
+            // Transition to verification OTP screen
+            setOtpType('signup');
+            setShowOtpScreen(true);
+            setError('⚠️ Your email is not confirmed yet. A verification code has been sent to your email. Please enter it below to confirm.');
+            setLoading(false);
+            return;
+          }
           if (msg.includes('Invalid login credentials'))
             throw new Error('Invalid email or password. Please try again.');
           throw signInError;
@@ -147,7 +159,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
           .eq('id', data.user.id)
           .single();
 
-        // Profile missing → recovery: ask user to sign up again
         if (profileError || !profile) {
           await supabase.auth.signOut();
           throw new Error(
@@ -177,6 +188,83 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
     }
   };
 
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email: email.trim().toLowerCase(),
+        token: otpCode.trim(),
+        type: otpType,
+      });
+
+      if (verifyError) throw verifyError;
+      if (!data.user) throw new Error('Verification failed — invalid session.');
+
+      // Sync profile metadata if it was signup
+      if (otpType === 'signup') {
+        await supabase
+          .from('user_profiles')
+          .upsert({
+            id: data.user.id,
+            name: name.trim() || 'User',
+            role: role as UserRole,
+          }, { onConflict: 'id' });
+      }
+
+      // Fetch profile to get name + role
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('name, role, joined_at')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Verification succeeded but profile is missing. Please contact administration.');
+      }
+
+      const authUser: AuthUser = {
+        id: data.user.id,
+        name: profile.name,
+        email: data.user.email!,
+        role: profile.role as UserRole,
+        joinedAt: profile.joined_at,
+      };
+
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        setShowOtpScreen(false);
+        onLogin(authUser);
+        onClose();
+      }, 1200);
+
+    } catch (err: any) {
+      setError(err.message ?? 'Invalid verification code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim().toLowerCase(),
+      });
+      if (resendError) throw resendError;
+      setError('✅ A fresh verification code has been sent to your email.');
+    } catch (err: any) {
+      setError(err.message ?? 'Failed to resend code. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
       <div className="relative w-full max-w-md bg-[#FDF8F0] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
@@ -201,15 +289,85 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
 
         {/* Body */}
         {success ? (
-          <div className="p-10 text-center space-y-4">
+          <div className="p-10 text-center space-y-4 animate-fade-in">
             <div className="w-14 h-14 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <h3 className="font-display font-bold text-lg text-[#4A3728]">
-              {mode === 'login' ? 'Logged In!' : 'Account Created!'}
+              {otpType === 'signup' && showOtpScreen ? 'Email Verified & Logged In!' : mode === 'login' ? 'Logged In!' : 'Account Created!'}
             </h3>
             <p className="text-xs text-slate-500">Redirecting to your dashboard…</p>
           </div>
+        ) : showOtpScreen ? (
+          <form onSubmit={handleVerifyOtp} className="p-6 space-y-5 animate-fade-in">
+            <div className="text-center space-y-2">
+              <h3 className="font-display font-bold text-base text-[#4A3728]">
+                Verify Your Email
+              </h3>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                We've sent a 6-digit verification code to <strong className="text-[#4A3728]">{email}</strong>. Please enter the code below.
+              </p>
+            </div>
+
+            {error && (
+              <p className={`text-xs p-3 rounded-xl border ${
+                error.startsWith('✅') || error.includes('successful')
+                  ? 'text-emerald-800 bg-emerald-50 border-emerald-200'
+                  : 'text-red-600 bg-red-50 border-red-200'
+              }`}>
+                {error}
+              </p>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5 text-center">
+                6-Digit Verification Code
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={6}
+                pattern="\d{6}"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000"
+                className="w-full text-center tracking-[1em] text-lg font-bold py-3 bg-white border border-slate-300 rounded-xl text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || otpCode.length < 6}
+              className="w-full py-3 bg-[#4A3728] hover:bg-[#6B5040] disabled:bg-[#4A3728]/50 text-white font-bold text-sm rounded-full shadow-md transition-all flex items-center justify-center space-x-2"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <span>Verify Code & Log In</span>
+                  <ArrowRight className="w-4 h-4 text-[#C4A882]" />
+                </>
+              )}
+            </button>
+
+            <div className="flex flex-col items-center gap-2 pt-2 border-t border-slate-200/60">
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={loading}
+                className="text-xs font-semibold text-[#9B7B5A] hover:underline"
+              >
+                Didn't receive the code? Resend Code
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowOtpScreen(false); setError(''); }}
+                className="text-xs font-semibold text-slate-500 hover:text-[#4A3728] hover:underline"
+              >
+                ← Back to Login / Sign Up
+              </button>
+            </div>
+          </form>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
