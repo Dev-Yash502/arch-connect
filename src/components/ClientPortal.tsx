@@ -492,7 +492,17 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                                             <span>Proposal Approved</span>
                                           </div>
 
-                                          <div className="text-xs">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                            {profDetails && (
+                                              <button
+                                                type="button"
+                                                onClick={() => onSelectProfModal(profDetails)}
+                                                className="w-full py-3 bg-white hover:bg-slate-50 text-[#4A3728] border border-slate-300 font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5"
+                                              >
+                                                <Eye className="w-3.5 h-3.5 text-[#9B7B5A]" />
+                                                <span>View Portfolio</span>
+                                              </button>
+                                            )}
                                             <a
                                               href={`https://wa.me/917782869911?text=Hello! I have approved your proposal on Arch-Connect for my project: ${encodeURIComponent(req.title)}. Let's discuss the next steps!`}
                                               target="_blank"
@@ -500,7 +510,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                                               className="w-full px-3 py-3 bg-[#25D366] hover:bg-[#20ba56] text-white rounded-xl font-bold flex items-center justify-center space-x-2 transition-colors shadow-sm"
                                             >
                                               <MessageSquare className="w-4 h-4" />
-                                              <span>Chat on WhatsApp (+91 77828 69911)</span>
+                                              <span>Chat on WhatsApp</span>
                                             </a>
                                           </div>
 

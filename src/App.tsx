@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { supabase } from './lib/supabase';
 import { Header } from './components/Header';
 import { ScrollAnimationHero } from './components/ScrollAnimationHero';
 
@@ -689,11 +689,6 @@ export default function App() {
   if (!currentUser) {
     return (
       <>
-        {!isSupabaseConfigured && (
-          <div className="bg-amber-500 text-white text-xs font-semibold py-2 px-4 text-center flex items-center justify-center space-x-2 animate-pulse z-50 relative">
-            <span>⚠️ Running in Demo Offline Mode. To connect database, add VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY to your environment.</span>
-          </div>
-        )}
         <LandingPage onOpenAuth={openAuth} />
         <AuthModal
           isOpen={isAuthOpen}
@@ -939,12 +934,6 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
       />
-
-      {!isSupabaseConfigured && (
-        <div className="bg-amber-500 text-white text-xs font-semibold py-2 px-4 text-center flex items-center justify-center space-x-2 animate-pulse relative z-10">
-          <span>⚠️ Running in Demo Offline Mode. To connect database, add VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY to your environment.</span>
-        </div>
-      )}
 
       {/* Main Content Area */}
       <main className="flex-1 pt-20 overflow-x-hidden">
