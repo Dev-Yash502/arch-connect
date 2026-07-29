@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './lib/supabase';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Header } from './components/Header';
 import { ScrollAnimationHero } from './components/ScrollAnimationHero';
 
@@ -157,56 +157,70 @@ export default function App() {
 
     // Restore existing session from Supabase
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('name, role, joined_at')
-          .eq('id', session.user.id)
-          .single();
-        if (profile) {
-          const authUser = {
-            id: session.user.id,
-            name: profile.name,
-            email: session.user.email!,
-            role: profile.role,
-            joinedAt: profile.joined_at,
-          };
-          setCurrentUser(authUser);
-          localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
+      try {
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('name, role, joined_at')
+            .eq('id', session.user.id)
+            .single();
+          if (profile) {
+            const authUser = {
+              id: session.user.id,
+              name: profile.name,
+              email: session.user.email!,
+              role: profile.role,
+              joinedAt: profile.joined_at,
+            };
+            setCurrentUser(authUser);
+            localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
+          } else {
+            setCurrentUser(null);
+            localStorage.removeItem('archconnect_user_session');
+          }
         } else {
           setCurrentUser(null);
           localStorage.removeItem('archconnect_user_session');
         }
-      } else {
+      } catch (err) {
+        console.error("Session restore error:", err);
         setCurrentUser(null);
         localStorage.removeItem('archconnect_user_session');
+      } finally {
+        setAuthLoading(false);
       }
+    }).catch((err) => {
+      console.error("Auth getSession error:", err);
       setAuthLoading(false);
     });
 
     // Listen for future login/logout events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
-        setCurrentUser(null);
-        localStorage.removeItem('archconnect_user_session');
-        setActiveTab('home');
-      } else if (session?.user) {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('name, role, joined_at')
-          .eq('id', session.user.id)
-          .single();
-        if (profile) {
-          const authUser = {
-            id: session.user.id,
-            name: profile.name,
-            email: session.user.email!,
-            role: profile.role,
-            joinedAt: profile.joined_at,
-          };
-          setCurrentUser(authUser);
-          localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
+      try {
+        if (event === 'SIGNED_OUT' || !session) {
+          setCurrentUser(null);
+          localStorage.removeItem('archconnect_user_session');
+          setActiveTab('home');
+        } else if (session?.user) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('name, role, joined_at')
+            .eq('id', session.user.id)
+            .single();
+          if (profile) {
+            const authUser = {
+              id: session.user.id,
+              name: profile.name,
+              email: session.user.email!,
+              role: profile.role,
+              joinedAt: profile.joined_at,
+            };
+            setCurrentUser(authUser);
+            localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
+          }
         }
+      } catch (err) {
+        console.error("Auth state change processing error:", err);
       }
     });
 
@@ -675,6 +689,11 @@ export default function App() {
   if (!currentUser) {
     return (
       <>
+        {!isSupabaseConfigured && (
+          <div className="bg-amber-500 text-white text-xs font-semibold py-2 px-4 text-center flex items-center justify-center space-x-2 animate-pulse z-50 relative">
+            <span>⚠️ Running in Demo Offline Mode. To connect database, add VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY to your environment.</span>
+          </div>
+        )}
         <LandingPage onOpenAuth={openAuth} />
         <AuthModal
           isOpen={isAuthOpen}
@@ -920,6 +939,12 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
       />
+
+      {!isSupabaseConfigured && (
+        <div className="bg-amber-500 text-white text-xs font-semibold py-2 px-4 text-center flex items-center justify-center space-x-2 animate-pulse relative z-10">
+          <span>⚠️ Running in Demo Offline Mode. To connect database, add VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY to your environment.</span>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 pt-20 overflow-x-hidden">

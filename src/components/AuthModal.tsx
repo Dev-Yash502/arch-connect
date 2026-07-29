@@ -15,7 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { AuthUser, UserRole } from '../types';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -52,6 +52,54 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    if (!isSupabaseConfigured) {
+      // Mock login / signup bypass
+      const inputEmail = email.trim().toLowerCase();
+      if ((inputEmail === 'admin' || inputEmail === 'admin@archconnect.com') && password === 'kfyarchconnect') {
+        const adminUser: AuthUser = {
+          id: 'admin-system',
+          name: 'Platform Administrator',
+          email: 'admin@archconnect.com',
+          role: 'admin',
+          joinedAt: new Date().toISOString()
+        };
+        localStorage.setItem('admin_session', JSON.stringify(adminUser));
+        setSuccess(true);
+        setTimeout(() => {
+          setSuccess(false);
+          onLogin(adminUser);
+          onClose();
+        }, 1000);
+        return;
+      }
+
+      // Determine mock role for login/signup
+      let resolvedRole: UserRole = role as UserRole;
+      if (mode === 'login') {
+        if (inputEmail.includes('prof') || inputEmail.includes('arch') || inputEmail.includes('eng') || inputEmail.includes('design')) {
+          resolvedRole = 'professional';
+        } else {
+          resolvedRole = 'client';
+        }
+      }
+
+      const mockUser: AuthUser = {
+        id: 'mock-user-' + Math.random().toString(36).substring(2, 9),
+        name: name.trim() || (email.split('@')[0]) || 'Demo User',
+        email: inputEmail,
+        role: resolvedRole,
+        joinedAt: new Date().toISOString()
+      };
+
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        onLogin(mockUser);
+        onClose();
+      }, 1200);
+      return;
+    }
 
     try {
       if (mode === 'signup') {
