@@ -68,6 +68,28 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
   const [ratingProfId, setRatingProfId] = useState('');
   const [ratingProfName, setRatingProfName] = useState('');
 
+  // Keep track of which proposals have initiated a chat
+  const [chattedProposals, setChattedProposals] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('archconnect_chatted_proposals');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const markProposalAsChatted = (proposalId: string) => {
+    if (!chattedProposals.includes(proposalId)) {
+      const updated = [...chattedProposals, proposalId];
+      setChattedProposals(updated);
+      try {
+        localStorage.setItem('archconnect_chatted_proposals', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
   const clientReqs = requirements.filter(r => r.ownerId === currentUser?.id);
 
   // Requirement form state
@@ -507,6 +529,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                                               href={`https://wa.me/917782869911?text=Hello! I have approved your proposal on Arch-Connect for my project: ${encodeURIComponent(req.title)}. Let's discuss the next steps!`}
                                               target="_blank"
                                               rel="noopener noreferrer"
+                                              onClick={() => markProposalAsChatted(prop.id)}
                                               className="w-full px-3 py-3 bg-[#25D366] hover:bg-[#20ba56] text-white rounded-xl font-bold flex items-center justify-center space-x-2 transition-colors shadow-sm"
                                             >
                                               <MessageSquare className="w-4 h-4" />
@@ -514,21 +537,23 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                                             </a>
                                           </div>
 
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setRatingReqId(req.id);
-                                              setRatingProfId(prop.professionalId);
-                                              setRatingProfName(displayName);
-                                              setRatingValue(5);
-                                              setRatingFeedback('');
-                                              setRatingModalOpen(true);
-                                            }}
-                                            className="w-full py-2.5 bg-[#4A3728] hover:bg-[#6B5040] text-white rounded-xl font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer shadow-sm text-xs"
-                                          >
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-                                            <span>Complete Project & Rate Expert</span>
-                                          </button>
+                                          {chattedProposals.includes(prop.id) && (
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setRatingReqId(req.id);
+                                                setRatingProfId(prop.professionalId);
+                                                setRatingProfName(displayName);
+                                                setRatingValue(5);
+                                                setRatingFeedback('');
+                                                setRatingModalOpen(true);
+                                              }}
+                                              className="w-full py-2.5 bg-[#4A3728] hover:bg-[#6B5040] text-white rounded-xl font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer shadow-sm text-xs mt-1 transition-all duration-300 animate-in fade-in"
+                                            >
+                                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                                              <span>Complete Project & Rate Expert</span>
+                                            </button>
+                                          )}
                                         </div>
                                       ) : (
                                         <div className="w-full flex flex-col sm:flex-row gap-2">
