@@ -65,6 +65,7 @@ create table if not exists proposals (
   key_highlights text[],
   scope_breakdown jsonb default '[]'::jsonb,
   status text default 'Pending',
+  rating_enabled boolean default false,
   created_at timestamptz default now()
 );
 
@@ -128,4 +129,22 @@ create policy "Anyone insert proposal"
 create policy "Anyone update proposal"
   on proposals for update
   using (true);
+
+-- Create delete policies to fix Admin Panel deletion
+create policy "Anyone delete user_profiles"
+  on user_profiles for delete
+  using (true);
+
+create policy "Anyone delete professionals"
+  on professionals for delete
+  using (true);
+
+create policy "Anyone delete requirements"
+  on requirements for delete
+  using (true);
+
+create policy "Anyone delete proposals"
+  on proposals for delete
+  using (true);
+
 

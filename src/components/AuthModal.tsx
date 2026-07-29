@@ -166,12 +166,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
           );
         }
 
+        let avatar = undefined;
+        if (profile.role === 'professional') {
+          const { data: prof } = await supabase
+            .from('professionals')
+            .select('avatar')
+            .eq('owner_id', data.user.id)
+            .maybeSingle();
+          if (prof?.avatar) {
+            avatar = prof.avatar;
+          }
+        }
+
         const authUser: AuthUser = {
           id: data.user.id,
           name: profile.name,
           email: data.user.email!,
           role: profile.role as UserRole,
           joinedAt: profile.joined_at,
+          avatar: avatar,
         };
 
         setSuccess(true);
@@ -183,6 +196,138 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
       }
     } catch (err: any) {
       setError(err.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickLogin = async (targetRole: 'client' | 'professional' | 'admin') => {
+    setError('');
+    setLoading(true);
+
+    try {
+      if (targetRole === 'admin') {
+        const adminUser: AuthUser = {
+          id: 'admin-system',
+          name: 'Platform Administrator',
+          email: 'admin@archconnect.com',
+          role: 'admin',
+          joinedAt: new Date().toISOString()
+        };
+        localStorage.setItem('admin_session', JSON.stringify(adminUser));
+        setSuccess(true);
+        setTimeout(() => {
+          setSuccess(false);
+          onLogin(adminUser);
+          onClose();
+        }, 1000);
+        return;
+      }
+
+      const testEmail = targetRole === 'client' ? 'client@demo.com' : 'professional@demo.com';
+      const testPassword = 'password123';
+      const testName = targetRole === 'client' ? 'Demo Client User' : 'Demo Professional Expert';
+
+      // 1. Try to sign in
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: testEmail,
+        password: testPassword,
+      });
+
+      if (signInError) {
+        if (signInError.message.toLowerCase().includes('invalid login credentials') || signInError.message.toLowerCase().includes('not found')) {
+          // Auto signup
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: testEmail,
+            password: testPassword,
+            options: {
+              data: {
+                name: testName,
+                role: targetRole,
+              },
+            },
+          });
+
+          if (signUpError) throw signUpError;
+          if (!signUpData.user) throw new Error('Quick signup failed.');
+
+          // Insert into user_profiles
+          await supabase
+            .from('user_profiles')
+            .upsert({
+              id: signUpData.user.id,
+              name: testName,
+              role: targetRole as UserRole,
+            }, { onConflict: 'id' });
+
+          if (signUpData.session) {
+            const authUser: AuthUser = {
+              id: signUpData.user.id,
+              name: testName,
+              email: testEmail,
+              role: targetRole as UserRole,
+              joinedAt: signUpData.user.created_at,
+            };
+            setSuccess(true);
+            setTimeout(() => {
+              setSuccess(false);
+              onLogin(authUser);
+              onClose();
+            }, 1000);
+            return;
+          } else {
+            // Confirmation code fallback
+            setEmail(testEmail);
+            setPassword(testPassword);
+            setName(testName);
+            setRole(targetRole as any);
+            setOtpType('signup');
+            setShowOtpScreen(true);
+            setError('✅ Quick registration successful! A 6-digit confirmation code was sent to your email to verify.');
+            setLoading(false);
+            return;
+          }
+        } else {
+          throw signInError;
+        }
+      }
+
+      if (!signInData.user) throw new Error('Sign in failed.');
+
+      // Fetch profile
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('name, role, joined_at')
+        .eq('id', signInData.user.id)
+        .single();
+
+      if (!profile) {
+        await supabase
+          .from('user_profiles')
+          .upsert({
+            id: signInData.user.id,
+            name: testName,
+            role: targetRole as UserRole,
+          });
+      }
+
+      const authUser: AuthUser = {
+        id: signInData.user.id,
+        name: profile?.name || testName,
+        email: signInData.user.email!,
+        role: (profile?.role || targetRole) as UserRole,
+        joinedAt: profile?.joined_at || signInData.user.created_at,
+      };
+
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        onLogin(authUser);
+        onClose();
+      }, 1000);
+
+    } catch (err: any) {
+      setError(err.message ?? 'Quick login failed.');
     } finally {
       setLoading(false);
     }
@@ -225,12 +370,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
         throw new Error('Verification succeeded but profile is missing. Please contact administration.');
       }
 
+      let avatar = undefined;
+      if (profile.role === 'professional') {
+        const { data: prof } = await supabase
+          .from('professionals')
+          .select('avatar')
+          .eq('owner_id', data.user.id)
+          .maybeSingle();
+        if (prof?.avatar) {
+          avatar = prof.avatar;
+        }
+      }
+
       const authUser: AuthUser = {
         id: data.user.id,
         name: profile.name,
         email: data.user.email!,
         role: profile.role as UserRole,
         joinedAt: profile.joined_at,
+        avatar: avatar,
       };
 
       setSuccess(true);
@@ -396,6 +554,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
                 Sign Up
               </button>
             </div>
+
+            {/* 1-Touch Quick Login — login only */}
+            {mode === 'login' && (
+              <div className="bg-amber-900/5 border border-amber-900/10 p-3 rounded-2xl space-y-2 animate-fade-in">
+                <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  <span>⚡ 1-Touch Quick Login (Auto-Registering)</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleQuickLogin('client')}
+                    className="py-2 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 text-blue-700 text-[11px] font-bold rounded-xl transition-all cursor-pointer border border-blue-200 text-center"
+                  >
+                    As User
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleQuickLogin('professional')}
+                    className="py-2 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-amber-900 text-[11px] font-bold rounded-xl transition-all cursor-pointer border border-amber-200 text-center"
+                  >
+                    As Expert
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleQuickLogin('admin')}
+                    className="py-2 bg-purple-50 hover:bg-purple-100 disabled:opacity-50 text-purple-700 text-[11px] font-bold rounded-xl transition-all cursor-pointer border border-purple-200 text-center"
+                  >
+                    As Admin
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Role Selector — signup only */}
             {mode === 'signup' && (

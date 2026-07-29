@@ -113,84 +113,103 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {currentUser ? (
-            /* Logged-In User Pill */
-            <div className="relative">
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-[#4A3728]/5 border border-[#4A3728]/20 rounded-full hover:bg-[#4A3728]/10 transition-all"
-              >
-                {/* Avatar */}
-                <div className="w-7 h-7 rounded-full bg-[#4A3728] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-                  {getInitial()}
-                </div>
-                <span className="text-xs font-bold text-[#4A3728] max-w-[90px] truncate">{currentUser.name.split(' ')[0]}</span>
-                {getRoleBadge()}
-                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-              </button>
-
-              {/* Dropdown */}
-              {userMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-fade-in">
-                  <div className="px-4 py-3 bg-[#4A3728]/5 border-b border-slate-200">
-                    <p className="text-xs font-bold text-[#4A3728] truncate">{currentUser.name}</p>
-                    <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>
-                    <div className="mt-1.5">{getRoleBadge()}</div>
-                  </div>
-
-                  {/* Quick links based on role */}
-                  {currentUser.role === 'client' && (
-                    <button
-                      onClick={() => { setActiveTab('client-portal'); setUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <Home className="w-3.5 h-3.5 text-[#9B7B5A]" />
-                      My User Portal
-                    </button>
+            /* Logged-In User Pill & One-Touch Logout */
+            <div className="flex items-center space-x-2.5">
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-[#4A3728]/5 border border-[#4A3728]/20 rounded-full hover:bg-[#4A3728]/10 transition-all"
+                >
+                  {/* Avatar */}
+                  {currentUser.avatar ? (
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-[#4A3728]/25"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-[#4A3728] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                      {getInitial()}
+                    </div>
                   )}
-                  {currentUser.role === 'professional' && (
-                    <button
-                      onClick={() => { setActiveTab('prof-portal'); setUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <Briefcase className="w-3.5 h-3.5 text-[#9B7B5A]" />
-                      My Professional Hub
-                    </button>
-                  )}
-                   {currentUser.role === 'admin' && (
-                    <>
+                  <span className="text-xs font-bold text-[#4A3728] max-w-[90px] truncate">{currentUser.name.split(' ')[0]}</span>
+                  {getRoleBadge()}
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                </button>
+
+                {/* Dropdown */}
+                {userMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-fade-in">
+                    <div className="px-4 py-3 bg-[#4A3728]/5 border-b border-slate-200">
+                      <p className="text-xs font-bold text-[#4A3728] truncate">{currentUser.name}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>
+                      <div className="mt-1.5">{getRoleBadge()}</div>
+                    </div>
+
+                    {/* Quick links based on role */}
+                    {currentUser.role === 'client' && (
                       <button
                         onClick={() => { setActiveTab('client-portal'); setUserMenuOpen(false); }}
                         className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                       >
-                        <Home className="w-3.5 h-3.5 text-blue-500" />
-                        User Portal
+                        <Home className="w-3.5 h-3.5 text-[#9B7B5A]" />
+                        My User Portal
                       </button>
+                    )}
+                    {currentUser.role === 'professional' && (
                       <button
                         onClick={() => { setActiveTab('prof-portal'); setUserMenuOpen(false); }}
                         className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                       >
-                        <Briefcase className="w-3.5 h-3.5 text-amber-500" />
-                        Professional Hub
+                        <Briefcase className="w-3.5 h-3.5 text-[#9B7B5A]" />
+                        My Professional Hub
                       </button>
-                      <button
-                        onClick={() => { setActiveTab('admin-panel'); setUserMenuOpen(false); }}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5 text-red-500" />
-                        Admin Panel
-                      </button>
-                    </>
-                  )}
+                    )}
+                     {currentUser.role === 'admin' && (
+                      <>
+                        <button
+                          onClick={() => { setActiveTab('client-portal'); setUserMenuOpen(false); }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                          <Home className="w-3.5 h-3.5 text-blue-500" />
+                          User Portal
+                        </button>
+                        <button
+                          onClick={() => { setActiveTab('prof-portal'); setUserMenuOpen(false); }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                          <Briefcase className="w-3.5 h-3.5 text-amber-500" />
+                          Professional Hub
+                        </button>
+                        <button
+                          onClick={() => { setActiveTab('admin-panel'); setUserMenuOpen(false); }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-red-500" />
+                          Admin Panel
+                        </button>
+                      </>
+                    )}
 
-                  <button
-                    onClick={() => { onLogout(); setUserMenuOpen(false); }}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 border-t border-slate-100 transition-colors"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    Log Out
-                  </button>
-                </div>
-              )}
+                    <button
+                      onClick={() => { onLogout(); setUserMenuOpen(false); }}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 border-t border-slate-100 transition-colors"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Log Out
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Dedicated One-Touch Logout Button */}
+              <button
+                onClick={onLogout}
+                className="p-2 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 rounded-full transition-all border border-red-200 cursor-pointer shadow-xs"
+                title="One-Touch Logout"
+              >
+                <LogOut className="w-4.5 h-4.5" />
+              </button>
             </div>
           ) : (
             <button
@@ -227,9 +246,17 @@ export const Header: React.FC<HeaderProps> = ({
           {/* User info in mobile */}
           {currentUser && (
             <div className="flex items-center gap-3 p-3 bg-[#4A3728]/5 rounded-xl border border-[#4A3728]/10 mb-2">
-              <div className="w-9 h-9 rounded-full bg-[#4A3728] text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
-                {getInitial()}
-              </div>
+              {currentUser.avatar ? (
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-[#4A3728]/25"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-[#4A3728] text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+                  {getInitial()}
+                </div>
+              )}
               <div className="min-w-0">
                 <p className="text-xs font-bold text-[#4A3728] truncate">{currentUser.name}</p>
                 <div className="mt-0.5">{getRoleBadge()}</div>

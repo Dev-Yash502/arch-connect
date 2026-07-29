@@ -20,7 +20,7 @@ export const ProfessionalsDirectory: React.FC<ProfessionalsDirectoryProps> = ({
   const [maxPriceFilter, setMaxPriceFilter] = useState<number>(250);
   const [minRatingFilter, setMinRatingFilter] = useState<number>(4.0);
 
-  const categories = ['All', 'Architects', 'Interior Designers', 'Civil Engineers', 'Material Providers'];
+  const categories = ['All', 'Architect', 'Interior Designer', 'Civil Engineer', 'Material Provider'];
 
   const filtered = professionals.filter((p) => {
     const matchesCategory = activeCategory === 'All' || p.role === activeCategory;

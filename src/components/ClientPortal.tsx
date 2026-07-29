@@ -94,7 +94,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
 
   // Requirement form state
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<ProfessionalCategory | 'All-in-One Turnkey'>('Architects');
+  const [category, setCategory] = useState<ProfessionalCategory | 'All-in-One Turnkey'>('Architect');
   const [builtUpAreaSqFt, setBuiltUpAreaSqFt] = useState<number>(2400);
   const [location, setLocation] = useState('Dehradun');
   const [budgetRange, setBudgetRange] = useState('₹45L - ₹65L');
@@ -215,10 +215,10 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                     onChange={(e) => setCategory(e.target.value as any)}
                     className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                   >
-                    <option value="Architects">Architects (Blueprints & Elevation)</option>
-                    <option value="Interior Designers">Interior Designers (Turnkey Living)</option>
-                    <option value="Civil Engineers">Civil Engineers (Structural Frame)</option>
-                    <option value="Material Providers">Material Providers (Slate & Glass)</option>
+                    <option value="Architect">Architect (Blueprints & Elevation)</option>
+                    <option value="Interior Designer">Interior Designer (Turnkey Living)</option>
+                    <option value="Civil Engineer">Civil Engineer (Structural Frame)</option>
+                    <option value="Material Provider">Material Provider (Slate & Glass)</option>
                     <option value="All-in-One Turnkey">All-in-One Turnkey Package</option>
                   </select>
                 </div>
@@ -537,22 +537,31 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                                             </a>
                                           </div>
 
-                                          {chattedProposals.includes(prop.id) && (
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                setRatingReqId(req.id);
-                                                setRatingProfId(prop.professionalId);
-                                                setRatingProfName(displayName);
-                                                setRatingValue(5);
-                                                setRatingFeedback('');
-                                                setRatingModalOpen(true);
-                                              }}
-                                              className="w-full py-2.5 bg-[#4A3728] hover:bg-[#6B5040] text-white rounded-xl font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer shadow-sm text-xs mt-1 transition-all duration-300 animate-in fade-in"
-                                            >
-                                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
-                                              <span>Complete Project & Rate Expert</span>
-                                            </button>
+                                          {prop.ratingEnabled ? (
+                                            <div className="space-y-1.5 mt-1 animate-in fade-in duration-300">
+                                              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-[11px] text-emerald-800 font-medium">
+                                                🎉 Admin has approved project completion! Please rate the expert to close this request.
+                                              </div>
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setRatingReqId(req.id);
+                                                  setRatingProfId(prop.professionalId);
+                                                  setRatingProfName(displayName);
+                                                  setRatingValue(5);
+                                                  setRatingFeedback('');
+                                                  setRatingModalOpen(true);
+                                                }}
+                                                className="w-full py-2.5 bg-[#4A3728] hover:bg-[#6B5040] text-white rounded-xl font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer shadow-sm text-xs"
+                                              >
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                                                <span>Complete Project & Rate Expert</span>
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[11px] text-slate-500 font-medium mt-1 text-center">
+                                              ⏳ Completion approval pending from Admin. You will be able to rate the expert once the admin enables it.
+                                            </div>
                                           )}
                                         </div>
                                       ) : (

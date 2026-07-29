@@ -1,4 +1,4 @@
-export type ProfessionalCategory = 'Architects' | 'Interior Designers' | 'Civil Engineers' | 'Material Providers';
+export type ProfessionalCategory = 'Architect' | 'Interior Designer' | 'Civil Engineer' | 'Material Provider';
 
 export type UserRole = 'client' | 'professional' | 'admin';
 
@@ -8,6 +8,7 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   joinedAt: string;
+  avatar?: string;
 }
 
 export interface PortfolioItem {
@@ -68,6 +69,7 @@ export interface Proposal {
   keyHighlights: string[];
   scopeBreakdown: { item: string; cost: number }[];
   status: 'Pending' | 'Accepted' | 'Shortlisted';
+  ratingEnabled?: boolean;
 }
 
 export interface CostEstimateInput {

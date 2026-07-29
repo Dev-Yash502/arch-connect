@@ -48,10 +48,10 @@ const FEATURES = [
 ];
 
 const CATEGORIES = [
-  { icon: <Building2 className="w-5 h-5" />, label: 'Architects', color: 'bg-amber-50 border-amber-200 text-amber-800' },
-  { icon: <Armchair className="w-5 h-5" />, label: 'Interior Designers', color: 'bg-rose-50 border-rose-200 text-rose-700' },
-  { icon: <Wrench className="w-5 h-5" />, label: 'Civil Engineers', color: 'bg-blue-50 border-blue-200 text-blue-700' },
-  { icon: <Layers className="w-5 h-5" />, label: 'Material Providers', color: 'bg-slate-50 border-slate-200 text-slate-700' },
+  { icon: <Building2 className="w-5 h-5" />, label: 'Architect', color: 'bg-amber-50 border-amber-200 text-amber-800' },
+  { icon: <Armchair className="w-5 h-5" />, label: 'Interior Designer', color: 'bg-rose-50 border-rose-200 text-rose-700' },
+  { icon: <Wrench className="w-5 h-5" />, label: 'Civil Engineer', color: 'bg-blue-50 border-blue-200 text-blue-700' },
+  { icon: <Layers className="w-5 h-5" />, label: 'Material Provider', color: 'bg-slate-50 border-slate-200 text-slate-700' },
 ];
 
 const TESTIMONIALS = [

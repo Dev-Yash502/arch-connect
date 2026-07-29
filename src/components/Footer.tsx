@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 
 interface FooterProps {
   onNavClick: (tab: string) => void;
@@ -29,7 +29,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick }) => {
             Platform
           </span>
           <button onClick={() => onNavClick('professionals')} className="text-slate-300 hover:text-white text-left transition-colors">
-            Architects Directory
+            Architect Directory
           </button>
           <button onClick={() => onNavClick('projects')} className="text-slate-300 hover:text-white text-left transition-colors">
             3D Active Projects

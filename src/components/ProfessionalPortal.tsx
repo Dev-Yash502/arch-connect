@@ -19,7 +19,8 @@ import {
   IndianRupee,
   ArrowRight,
   BadgeCheck,
-  Send
+  Send,
+  Loader2
 } from 'lucide-react';
 import { Professional, ProfessionalCategory, PortfolioItem, ProjectRequirement, Proposal, AuthUser } from '../types';
 
@@ -31,6 +32,7 @@ interface ProfessionalPortalProps {
   onSelectViewDirectory: () => void;
   onAddProposal?: (proposal: Proposal) => void;
   currentUser?: AuthUser | null;
+  profsLoaded?: boolean;
 }
 
 export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
@@ -40,8 +42,18 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
   onSaveProfessional,
   onSelectViewDirectory,
   onAddProposal,
-  currentUser
+  currentUser,
+  profsLoaded = true
 }) => {
+  if (!profsLoaded) {
+    return (
+      <div className="min-h-[75vh] flex flex-col items-center justify-center space-y-3 bg-[#FDF8F0]">
+        <Loader2 className="w-9 h-9 text-[#9B7B5A] animate-spin" />
+        <p className="text-xs font-bold text-[#4A3728]/85 uppercase tracking-wider animate-pulse">Loading Studio Portal...</p>
+      </div>
+    );
+  }
+
   const [activePortalTab, setActivePortalTab] = useState<'portfolio' | 'requests'>('portfolio');
   const [expressedInterest, setExpressedInterest] = useState<Set<string>>(new Set());
 
@@ -51,7 +63,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
   const currentProf = professionals.find((p) => p.id === currentUser?.id || p.owner_id === currentUser?.id);
 
   const [name, setName] = useState('');
-  const [role, setRole] = useState<ProfessionalCategory>('Architects');
+  const [role, setRole] = useState<ProfessionalCategory>('Architect');
   const [title, setTitle] = useState('');
   const [experienceYears, setExperienceYears] = useState(5);
   const [pricePerSqFt, setPricePerSqFt] = useState(100);
@@ -72,13 +84,30 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
   const [projArea, setProjArea] = useState<number>(2500);
   const [projLocation, setProjLocation] = useState('Dehradun');
 
+  const [activeEditTab, setActiveEditTab] = useState<'personal' | 'contact' | 'document'>('personal');
+
+  // Verification sub-states
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [verifyingPhone, setVerifyingPhone] = useState(false);
+  const [phoneOtp, setPhoneOtp] = useState('');
+
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verifyingEmail, setVerifyingEmail] = useState(false);
+  const [emailOtp, setEmailOtp] = useState('');
+
+  const [docUploaded, setDocUploaded] = useState(false);
+  const [docFileName, setDocFileName] = useState('');
+  const [licenseType, setLicenseType] = useState('COA Architect Registration');
+  const [licenseId, setLicenseId] = useState('');
+
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Sync state with currentProf database entity
   React.useEffect(() => {
     if (currentProf) {
       setName(currentProf.name || '');
-      setRole(currentProf.role || 'Architects');
+      setRole(currentProf.role || 'Architect');
       setTitle(currentProf.title || '');
       setExperienceYears(currentProf.experienceYears || 5);
       setPricePerSqFt(currentProf.pricePerSqFt || 100);
@@ -89,10 +118,30 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
       setPhone(currentProf.phone || '');
       setEmail(currentProf.email || '');
       setPortfolio(currentProf.portfolio || []);
+      setPhoneVerified(currentProf.phone ? true : false);
+      setEmailVerified(currentProf.email ? true : false);
+      
+      // Parse mock document verification fields from localstorage/metadata if available (or keep defaults)
+      const cachedDoc = localStorage.getItem(`prof_doc_${currentProf.id}`);
+      if (cachedDoc) {
+        try {
+          const parsed = JSON.parse(cachedDoc);
+          setDocUploaded(parsed.uploaded || false);
+          setDocFileName(parsed.fileName || '');
+          setLicenseType(parsed.licenseType || 'COA Architect Registration');
+          setLicenseId(parsed.licenseId || '');
+        } catch (e) {}
+      } else {
+        setDocUploaded(false);
+        setDocFileName('');
+        setLicenseId('');
+      }
+
+      setIsEditingProfile(false);
     } else if (currentUser) {
       setName(currentUser.name || '');
       setEmail(currentUser.email || '');
-      setRole('Architects');
+      setRole('Architect');
       setTitle('');
       setExperienceYears(5);
       setPricePerSqFt(100);
@@ -101,7 +150,13 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
       setSpecialtiesText('');
       setAvatar('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80');
       setPhone('');
+      setPhoneVerified(false);
+      setEmailVerified(currentUser.email ? true : false);
+      setDocUploaded(false);
+      setDocFileName('');
+      setLicenseId('');
       setPortfolio([]);
+      setIsEditingProfile(true);
     }
   }, [currentProf, currentUser]);
 
@@ -153,8 +208,18 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
       badge: currentProf?.badge || 'Verified'
     };
 
+    // Save verification docs metadata
+    const docData = {
+      uploaded: docUploaded,
+      fileName: docFileName,
+      licenseType,
+      licenseId
+    };
+    localStorage.setItem(`prof_doc_${updated.id}`, JSON.stringify(docData));
+
     onSaveProfessional(updated);
     setSavedSuccess(true);
+    setIsEditingProfile(false);
     setTimeout(() => setSavedSuccess(false), 2500);
   };
 
@@ -310,7 +375,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
                                 requirementId: req.id,
                                 professionalId: currentProf?.id || currentUser?.id || `prof-${Date.now()}`,
                                 professionalName: name || currentProf?.name || currentUser?.name || 'Ar. Verified Expert',
-                                professionalRole: role || currentProf?.role || 'Architects',
+                                professionalRole: role || currentProf?.role || 'Architect',
                                 professionalAvatar: avatar || currentProf?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
                                 rating: currentProf?.rating || 4.9,
                                 priceEstimateTotal: Math.round((req.builtUpAreaSqFt || 2000) * (pricePerSqFt || currentProf?.pricePerSqFt || 150)),
@@ -361,191 +426,544 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
         {/* Main Editor Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Left Column: Profile Details Form */}
+          {/* Left Column: Profile Details Form / Summary */}
           <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
             <div className="border-b border-slate-200 pb-4 flex items-center justify-between">
               <h2 className="font-display font-bold text-lg text-[#4A3728] flex items-center space-x-2">
                 <User className="w-5 h-5 text-[#9B7B5A]" />
-                <span>Professional Details</span>
+                <span>{isEditingProfile ? 'Professional Details' : 'Professional Profile Summary'}</span>
               </h2>
-              <span className="text-xs font-bold uppercase px-3 py-1 bg-amber-50 text-amber-900 rounded-full border border-amber-200">
-                {role}
-              </span>
+              {isEditingProfile ? (
+                <span className="text-xs font-bold uppercase px-3 py-1 bg-amber-50 text-amber-900 rounded-full border border-amber-200">
+                  {role}
+                </span>
+              ) : (
+                <button
+                  onClick={() => setIsEditingProfile(true)}
+                  className="px-4 py-1.5 bg-[#FDF8F0] hover:bg-[#F3EBE1] text-[#4A3728] border border-slate-300 rounded-full font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Edit Profile
+                </button>
+              )}
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name & Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ar. Ananya Verma"
-                    className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Category / Role</label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as ProfessionalCategory)}
-                    className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+            {isEditingProfile ? (
+              <form onSubmit={handleSaveProfile} className="space-y-6">
+                
+                {/* 3-Step Edit Profile Tabs */}
+                <div className="flex flex-wrap border-b border-slate-200 text-xs font-bold uppercase tracking-wider gap-x-2 gap-y-1 pb-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveEditTab('personal')}
+                    className={`pb-2 px-3 border-b-2 transition-all cursor-pointer ${
+                      activeEditTab === 'personal'
+                        ? 'border-[#4A3728] text-[#4A3728] font-extrabold'
+                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                    }`}
                   >
-                    <option value="Architects">Architects</option>
-                    <option value="Interior Designers">Interior Designers</option>
-                    <option value="Civil Engineers">Civil Engineers</option>
-                    <option value="Material Providers">Material Providers</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Designation & Firm Name</label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Principal Architect & Founder, Atelier Verma"
-                  className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Contact Phone</label>
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="e.g. +91 98765 43210"
-                    className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Contact Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. contact@yourfirm.com"
-                    className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Price / Sq.Ft (₹)</label>
-                  <input
-                    type="number"
-                    required
-                    value={pricePerSqFt === 0 ? '' : pricePerSqFt}
-                    onChange={(e) => setPricePerSqFt(Number(e.target.value))}
-                    placeholder="180"
-                    className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Experience (Years)</label>
-                  <input
-                    type="number"
-                    required
-                    value={experienceYears === 0 ? '' : experienceYears}
-                    onChange={(e) => setExperienceYears(Number(e.target.value))}
-                    placeholder="12"
-                    className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">City / Location</label>
-                  <select
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                    1. Personal Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveEditTab('contact')}
+                    className={`pb-2 px-3 border-b-2 transition-all cursor-pointer ${
+                      activeEditTab === 'contact'
+                        ? 'border-[#4A3728] text-[#4A3728] font-extrabold'
+                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                    }`}
                   >
-                    <option value="Dehradun">Dehradun</option>
-                    <option value="Roorkee">Roorkee</option>
-                    <option value="Delhi">Delhi</option>
-                  </select>
+                    2. Contact Verification
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveEditTab('document')}
+                    className={`pb-2 px-3 border-b-2 transition-all cursor-pointer ${
+                      activeEditTab === 'document'
+                        ? 'border-[#4A3728] text-[#4A3728] font-extrabold'
+                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                    }`}
+                  >
+                    3. Document Verification
+                  </button>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Profile Photo / Avatar</label>
-                <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#FDF8F0] p-4 rounded-2xl border border-slate-300">
-                  <img
-                    src={avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'}
-                    alt="Avatar Preview"
-                    className="w-16 h-16 rounded-full object-cover border-2 border-[#4A3728] shadow-sm flex-shrink-0"
-                  />
-                  <div className="flex-1 w-full space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <label className="px-4 py-2 bg-[#4A3728] hover:bg-[#6B5040] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs transition-colors inline-flex items-center space-x-1.5">
-                        <ImageIcon className="w-3.5 h-3.5" />
-                        <span>Upload Photo from Device</span>
+                {/* Tab 1: Personal Details */}
+                {activeEditTab === 'personal' && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name & Title</label>
                         <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setAvatar(reader.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
+                          type="text"
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Ar. Ananya Verma"
+                          className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                         />
-                      </label>
-                      <span className="text-[11px] text-slate-500 font-medium">PNG, JPG up to 5MB</span>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Category / Role</label>
+                        <select
+                          value={role}
+                          onChange={(e) => setRole(e.target.value as ProfessionalCategory)}
+                          className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                        >
+                          <option value="Architect">Architect</option>
+                          <option value="Interior Designer">Interior Designer</option>
+                          <option value="Civil Engineer">Civil Engineer</option>
+                          <option value="Material Provider">Material Provider</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Designation & Firm Name</label>
+                      <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="Principal Architect & Founder, Atelier Verma"
+                        className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Price / Sq.Ft (₹)</label>
+                        <input
+                          type="number"
+                          value={pricePerSqFt === 0 ? '' : pricePerSqFt}
+                          onChange={(e) => setPricePerSqFt(Number(e.target.value))}
+                          placeholder="180"
+                          className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Experience (Years)</label>
+                        <input
+                          type="number"
+                          value={experienceYears === 0 ? '' : experienceYears}
+                          onChange={(e) => setExperienceYears(Number(e.target.value))}
+                          placeholder="12"
+                          className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-600 uppercase mb-1">City / Location</label>
+                        <select
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                        >
+                          <option value="Dehradun">Dehradun</option>
+                          <option value="Roorkee">Roorkee</option>
+                          <option value="Delhi">Delhi</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Profile Photo / Avatar</label>
+                      <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#FDF8F0] p-4 rounded-2xl border border-slate-300">
+                        <img
+                          src={avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'}
+                          alt="Avatar Preview"
+                          className="w-16 h-16 rounded-full object-cover border-2 border-[#4A3728] shadow-sm flex-shrink-0"
+                        />
+                        <div className="flex-1 w-full space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="px-4 py-2 bg-[#4A3728] hover:bg-[#6B5040] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs transition-colors inline-flex items-center space-x-1.5 font-sans">
+                              <ImageIcon className="w-3.5 h-3.5" />
+                              <span>Upload Photo from Device</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      setAvatar(reader.result as string);
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+                            </label>
+                            <span className="text-[11px] text-slate-500 font-medium">PNG, JPG up to 5MB</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Specialties (Comma Separated)</label>
+                      <input
+                        type="text"
+                        value={specialtiesText}
+                        onChange={(e) => setSpecialtiesText(e.target.value)}
+                        placeholder="Modern Villas, Elevation Architecture, Passive Solar"
+                        className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Bio & Design Philosophy</label>
+                      <textarea
+                        rows={4}
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        placeholder="Detail your architectural philosophy, background, and signature design style..."
+                        className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                      />
                     </div>
                   </div>
+                )}
+
+                {/* Tab 2: Contact Verification */}
+                {activeEditTab === 'contact' && (
+                  <div className="space-y-4 animate-fade-in text-[#2C1F14]">
+                    
+                    {/* Phone Verification */}
+                    <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-slate-700 uppercase">Contact Phone Number</label>
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                          phoneVerified
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : 'bg-amber-50 text-amber-900 border-amber-200'
+                        }`}>
+                          {phoneVerified ? 'Verified ✓' : 'Pending Verification'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => {
+                            setPhone(e.target.value);
+                            setPhoneVerified(false);
+                          }}
+                          placeholder="e.g. +91 98765 43210"
+                          className="flex-1 px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                        />
+                        {!phoneVerified && phone.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVerifyingPhone(true);
+                              setPhoneOtp('');
+                            }}
+                            className="px-4 bg-[#4A3728] hover:bg-[#6B5040] text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                          >
+                            Verify
+                          </button>
+                        )}
+                      </div>
+
+                      {verifyingPhone && (
+                        <div className="p-3 bg-[#FDF8F0] rounded-xl border border-[#C4A882]/40 space-y-2 text-xs">
+                          <p className="font-semibold text-slate-600">Enter verification OTP sent to your phone (Demo Code: <strong className="text-[#4A3728]">1234</strong>):</p>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              maxLength={4}
+                              value={phoneOtp}
+                              onChange={(e) => setPhoneOtp(e.target.value)}
+                              placeholder="0000"
+                              className="w-20 text-center px-2 py-1 bg-white border border-slate-300 rounded-lg font-bold"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (phoneOtp === '1234') {
+                                  setPhoneVerified(true);
+                                  setVerifyingPhone(false);
+                                } else {
+                                  alert('Invalid OTP code. Please enter 1234');
+                                }
+                              }}
+                              className="px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setVerifyingPhone(false)}
+                              className="px-3 bg-slate-300 hover:bg-slate-400 text-slate-700 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Email Verification */}
+                    <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-slate-700 uppercase">Contact Email Address</label>
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                          emailVerified
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : 'bg-amber-50 text-amber-900 border-amber-200'
+                        }`}>
+                          {emailVerified ? 'Verified ✓' : 'Pending Verification'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            setEmailVerified(false);
+                          }}
+                          placeholder="e.g. contact@yourfirm.com"
+                          className="flex-1 px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                        />
+                        {!emailVerified && email.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVerifyingEmail(true);
+                              setEmailOtp('');
+                            }}
+                            className="px-4 bg-[#4A3728] hover:bg-[#6B5040] text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                          >
+                            Verify
+                          </button>
+                        )}
+                      </div>
+
+                      {verifyingEmail && (
+                        <div className="p-3 bg-[#FDF8F0] rounded-xl border border-[#C4A882]/40 space-y-2 text-xs">
+                          <p className="font-semibold text-slate-600">Enter verification OTP sent to your email (Demo Code: <strong className="text-[#4A3728]">4321</strong>):</p>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              maxLength={4}
+                              value={emailOtp}
+                              onChange={(e) => setEmailOtp(e.target.value)}
+                              placeholder="0000"
+                              className="w-20 text-center px-2 py-1 bg-white border border-slate-300 rounded-lg font-bold"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (emailOtp === '4321') {
+                                  setEmailVerified(true);
+                                  setVerifyingEmail(false);
+                                } else {
+                                  alert('Invalid OTP code. Please enter 4321');
+                                }
+                              }}
+                              className="px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setVerifyingEmail(false)}
+                              className="px-3 bg-slate-300 hover:bg-slate-400 text-slate-700 text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 3: Document Verification */}
+                {activeEditTab === 'document' && (
+                  <div className="space-y-4 animate-fade-in text-[#2C1F14]">
+                    <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-bold uppercase text-slate-700">Official License Certification</h4>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Upload COA registration, GSTIN, or engineering license copy</p>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                          docUploaded
+                            ? 'bg-amber-50 text-amber-900 border-amber-200'
+                            : 'bg-slate-100 text-slate-500 border-slate-200'
+                        }`}>
+                          {docUploaded ? 'Pending Review' : 'Missing Documents'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">License Type</label>
+                          <select
+                            value={licenseType}
+                            onChange={(e) => setLicenseType(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                          >
+                            <option value="COA Architect Registration">COA Architect License</option>
+                            <option value="GSTIN Number">GSTIN Certificate</option>
+                            <option value="Civil Engineering Certification">Engineering Degree</option>
+                            <option value="Design Institute Diploma">Diploma / Certification</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Registration/License ID</label>
+                          <input
+                            type="text"
+                            value={licenseId}
+                            onChange={(e) => setLicenseId(e.target.value)}
+                            placeholder="e.g. CA/2012/54687"
+                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Certificate Copy (PDF / Image)</label>
+                        <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-100/50 transition-colors bg-white relative">
+                          {docUploaded ? (
+                            <div className="text-center space-y-1">
+                              <span className="text-xl">📄</span>
+                              <p className="text-xs font-bold text-[#4A3728]">{docFileName || 'license_certificate.pdf'}</p>
+                              <p className="text-[10px] text-slate-400">File uploaded successfully. Tap to replace.</p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDocUploaded(false);
+                                  setDocFileName('');
+                                }}
+                                className="text-[10px] font-bold text-red-600 hover:underline pt-2 inline-block cursor-pointer"
+                              >
+                                Remove File
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="text-center space-y-1">
+                              <span className="text-xl">📤</span>
+                              <p className="text-xs font-bold text-slate-500">Drag & Drop license file copy here</p>
+                              <p className="text-[10px] text-slate-400">PDF, JPG, PNG up to 10MB</p>
+                              <label className="mt-2 inline-block px-3 py-1 bg-[#4A3728] hover:bg-[#6B5040] text-white text-[10.5px] font-bold rounded-lg cursor-pointer transition-colors font-sans">
+                                Select Document File
+                                <input
+                                  type="file"
+                                  accept="image/*,application/pdf"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      setDocUploaded(true);
+                                      setDocFileName(file.name);
+                                    }
+                                  }}
+                                />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {docUploaded && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 leading-relaxed font-semibold">
+                          ⚠️ Note: Document uploaded. Our operations team will review your submitted registration copy and grant your "Verified" badge within 24 hours.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Save Button */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full py-3.5 bg-[#4A3728] hover:bg-[#6B5040] text-white font-extrabold text-sm rounded-2xl shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4 text-amber-200" />
+                    <span>Save Profile & Portfolio Changes</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* 3-Line Summary Card */
+              <div className="space-y-5 text-[#2C1F14]">
+                {/* Line 1: Avatar, Name & Title */}
+                <div className="flex items-center space-x-4">
+                  <img
+                    src={avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'}
+                    alt="Avatar"
+                    className="w-16 h-16 rounded-full object-cover border-2 border-[#4A3728]"
+                  />
+                  <div>
+                    <div className="flex items-center space-x-2.5">
+                      <span className="font-display font-bold text-base text-slate-900">{name || 'Unset Profile'}</span>
+                      <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 bg-amber-50 text-[#4A3728] border border-[#C4A882] rounded-full">
+                        {role}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-semibold mt-0.5">{title || 'No Title Provided'}</p>
+                  </div>
+                </div>
+
+                {/* Line 2: Stats & Contact Info */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-slate-600 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <span className="flex items-center space-x-1.5">
+                    <span>📍</span>
+                    <span>{location}</span>
+                  </span>
+                  <span className="text-slate-300">|</span>
+                  <span className="flex items-center space-x-1.5">
+                    <span>💼</span>
+                    <span>{experienceYears} Years Exp</span>
+                  </span>
+                  <span className="text-slate-300">|</span>
+                  <span className="flex items-center space-x-1.5">
+                    <span>💰</span>
+                    <span>₹{pricePerSqFt}/sqft</span>
+                  </span>
+                  {phone && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span className="flex items-center space-x-1.5">
+                        <span>📞</span>
+                        <span>{phone}</span>
+                      </span>
+                    </>
+                  )}
+                  {email && (
+                    <>
+                      <span className="text-slate-300">|</span>
+                      <span className="flex items-center space-x-1.5">
+                        <span>✉️</span>
+                        <span>{email}</span>
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Line 3: Specialties & Bio */}
+                <div className="text-xs space-y-1.5 bg-[#FDF8F0] p-4 rounded-2xl border border-[#F3EBE1]">
+                  {specialtiesText && (
+                    <p className="font-semibold text-slate-700">
+                      <span className="text-[#9B7B5A] font-bold">Specialties:</span> {specialtiesText}
+                    </p>
+                  )}
+                  {bio && (
+                    <p className="text-slate-500 font-medium leading-relaxed italic">
+                      "{bio}"
+                    </p>
+                  )}
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Specialties (Comma Separated)</label>
-                <input
-                  type="text"
-                  value={specialtiesText}
-                  onChange={(e) => setSpecialtiesText(e.target.value)}
-                  placeholder="Modern Villas, Elevation Architecture, Passive Solar"
-                  className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Bio & Design Philosophy</label>
-                <textarea
-                  rows={4}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Detail your architectural philosophy, background, and signature design style..."
-                  className="w-full px-4 py-2.5 bg-[#FDF8F0] border border-slate-300 rounded-xl text-xs font-semibold text-[#2C1F14] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="w-full py-3.5 bg-[#4A3728] hover:bg-[#6B5040] text-white font-extrabold text-sm rounded-2xl shadow-md transition-all flex items-center justify-center space-x-2"
-                >
-                  <Save className="w-4 h-4 text-amber-200" />
-                  <span>Save Profile & Portfolio Changes</span>
-                </button>
-              </div>
-            </form>
+            )}
           </div>
 
           {/* Right Column: Portfolio Project Manager */}

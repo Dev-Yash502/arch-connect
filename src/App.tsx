@@ -165,12 +165,25 @@ export default function App() {
             .eq('id', session.user.id)
             .single();
           if (profile) {
+            let avatar = undefined;
+            if (profile.role === 'professional') {
+              const { data: prof } = await supabase
+                .from('professionals')
+                .select('avatar')
+                .eq('owner_id', session.user.id)
+                .maybeSingle();
+              if (prof?.avatar) {
+                avatar = prof.avatar;
+              }
+            }
+
             const authUser = {
               id: session.user.id,
               name: profile.name,
               email: session.user.email!,
               role: profile.role,
               joinedAt: profile.joined_at,
+              avatar: avatar,
             };
             setCurrentUser(authUser);
             localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
@@ -208,12 +221,25 @@ export default function App() {
             .eq('id', session.user.id)
             .single();
           if (profile) {
+            let avatar = undefined;
+            if (profile.role === 'professional') {
+              const { data: prof } = await supabase
+                .from('professionals')
+                .select('avatar')
+                .eq('owner_id', session.user.id)
+                .maybeSingle();
+              if (prof?.avatar) {
+                avatar = prof.avatar;
+              }
+            }
+
             const authUser = {
               id: session.user.id,
               name: profile.name,
               email: session.user.email!,
               role: profile.role,
               joinedAt: profile.joined_at,
+              avatar: avatar,
             };
             setCurrentUser(authUser);
             localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
@@ -487,7 +513,7 @@ export default function App() {
   };
 
   const handleSaveProfessional = async (updatedProf: Professional) => {
-    // Optimistic UI update
+    // 1. Optimistic UI update for professionals list
     setProfessionals((prev) => {
       const exists = prev.some((p) => p.id === updatedProf.id);
       return exists
@@ -495,7 +521,18 @@ export default function App() {
         : [updatedProf, ...prev];
     });
 
-    // Persist to Supabase
+    // 2. Optimistic UI update for current user session in header
+    if (currentUser?.id) {
+      const updatedUser = {
+        ...currentUser,
+        name: updatedProf.name,
+        avatar: updatedProf.avatar,
+      };
+      setCurrentUser(updatedUser);
+      localStorage.setItem('archconnect_user_session', JSON.stringify(updatedUser));
+    }
+
+    // 3. Persist to database in background
     const dbRow = {
       id: updatedProf.id,
       name: updatedProf.name,
@@ -516,9 +553,26 @@ export default function App() {
       completed_projects_count: updatedProf.completedProjectsCount,
       owner_id: currentUser?.id ?? null,
     };
-    const { error } = await supabase.from('professionals').upsert(dbRow, { onConflict: 'id' });
-    if (error) {
-      console.error('Failed to save professional:', error.message);
+    
+    // Perform parallel database upserts
+    const promises: any[] = [
+      supabase.from('professionals').upsert(dbRow, { onConflict: 'id' })
+    ];
+
+    if (currentUser?.id) {
+      promises.push(
+        supabase
+          .from('user_profiles')
+          .update({ name: updatedProf.name })
+          .eq('id', currentUser.id)
+      );
+    }
+
+    const results = await Promise.all(promises);
+    const hasError = results.some(r => r.error);
+
+    if (hasError) {
+      console.error('Failed to save profile details to Supabase:', results.map(r => r.error?.message).filter(Boolean));
     } else {
       await fetchProfessionals();
     }
@@ -948,6 +1002,7 @@ export default function App() {
               onSelectViewDirectory={() => setActiveTab('professionals')}
               onAddProposal={handleAddProposal}
               currentUser={currentUser}
+              profsLoaded={profsLoaded}
             />
           ) : (
             <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center px-4">

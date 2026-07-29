@@ -29,7 +29,7 @@ export const ClientEngineerMatcher: React.FC<ClientEngineerMatcherProps> = ({
   onSelectProfModal
 }) => {
   const [selectedReqId, setSelectedReqId] = useState<string>(requirements[0]?.id || '');
-  const [targetCategory, setTargetCategory] = useState<'All' | 'Civil Engineers' | 'Architects' | 'Interior Designers'>('All');
+  const [targetCategory, setTargetCategory] = useState<'All' | 'Civil Engineer' | 'Architect' | 'Interior Designer'>('All');
 
   const selectedReq = requirements.find((r) => r.id === selectedReqId) || requirements[0];
 
@@ -41,7 +41,7 @@ export const ClientEngineerMatcher: React.FC<ClientEngineerMatcherProps> = ({
       } else {
         // Map types correctly
         const reqCat = selectedReq.category;
-        if (reqCat === 'Civil Engineers' || reqCat === 'Architects' || reqCat === 'Interior Designers') {
+        if (reqCat === 'Civil Engineer' || reqCat === 'Architect' || reqCat === 'Interior Designer') {
           setTargetCategory(reqCat);
         }
       }
@@ -50,7 +50,7 @@ export const ClientEngineerMatcher: React.FC<ClientEngineerMatcherProps> = ({
 
   // Smart Matching Algorithm
   const matchedProfessionals = professionals
-    .filter((prof) => prof.role !== 'Material Providers') // Exclude Material Providers as requested (Coming Soon)
+    .filter((prof) => prof.role !== 'Material Provider') // Exclude Material Provider as requested (Coming Soon)
     .filter((prof) => targetCategory === 'All' || prof.role === targetCategory)
     .map((prof) => {
       let score = 70; // Base score
@@ -117,7 +117,7 @@ export const ClientEngineerMatcher: React.FC<ClientEngineerMatcherProps> = ({
 
         {/* Category Selector Filter */}
         <div className="flex items-center gap-1.5 bg-[#FDF8F0] p-1.5 rounded-2xl border border-slate-300 text-xs font-bold">
-          {(['Civil Engineers', 'Architects', 'Interior Designers', 'All'] as const).map((cat) => (
+          {(['Civil Engineer', 'Architect', 'Interior Designer', 'All'] as const).map((cat) => (
             <button
               key={cat}
               onClick={() => setTargetCategory(cat)}

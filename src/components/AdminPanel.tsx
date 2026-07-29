@@ -25,6 +25,13 @@ export const AdminPanel: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Bulk deletion selection state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [activeTab]);
+
   // Fetch all data from database
   const loadAllData = async () => {
     setLoading(true);
@@ -86,6 +93,7 @@ export const AdminPanel: React.FC = () => {
         keyHighlights: r.key_highlights ?? [],
         scopeBreakdown: r.scope_breakdown ?? [],
         status: r.status as any,
+        ratingEnabled: !!r.rating_enabled,
         createdAt: new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
       })));
 
@@ -112,52 +120,74 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
-  // Deletion Actions
-  const handleDeleteUser = async (userId: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete user "${name}"? This action is permanent and might leave orphaned requests.`)) return;
-    try {
-      const { error } = await supabase.from('user_profiles').delete().eq('id', userId);
-      if (error) throw error;
-      setUsers(prev => prev.filter(u => u.id !== userId));
-      triggerToast(`User "${name}" deleted successfully.`);
-    } catch (err: any) {
-      triggerToast(`Delete failed: ${err.message}`, true);
+  // Selection and Bulk Actions
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    const allFilteredIds = filteredItems.map(item => item.id);
+    const allSelected = allFilteredIds.every(id => selectedIds.includes(id));
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(id => !allFilteredIds.includes(id)));
+    } else {
+      setSelectedIds(prev => {
+        const unique = new Set([...prev, ...allFilteredIds]);
+        return Array.from(unique);
+      });
     }
   };
 
-  const handleDeleteProfessional = async (profId: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete professional "${name}"? This will remove their catalog listings.`)) return;
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmMsg = `Are you sure you want to delete the ${selectedIds.length} selected ${activeTab}? This action is permanent and cannot be undone.`;
+    if (!window.confirm(confirmMsg)) return;
+
     try {
-      const { error } = await supabase.from('professionals').delete().eq('id', profId);
+      let table = '';
+      if (activeTab === 'users') table = 'user_profiles';
+      else if (activeTab === 'professionals') table = 'professionals';
+      else if (activeTab === 'requirements') table = 'requirements';
+      else if (activeTab === 'proposals') table = 'proposals';
+
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .in('id', selectedIds);
+
       if (error) throw error;
-      setProfessionals(prev => prev.filter(p => p.id !== profId));
-      triggerToast(`Professional "${name}" deleted successfully.`);
+
+      // Update local state
+      if (activeTab === 'users') {
+        setUsers(prev => prev.filter(u => !selectedIds.includes(u.id)));
+      } else if (activeTab === 'professionals') {
+        setProfessionals(prev => prev.filter(p => !selectedIds.includes(p.id)));
+      } else if (activeTab === 'requirements') {
+        setRequirements(prev => prev.filter(r => !selectedIds.includes(r.id)));
+      } else if (activeTab === 'proposals') {
+        setProposals(prev => prev.filter(p => !selectedIds.includes(p.id)));
+      }
+
+      triggerToast(`Successfully deleted ${selectedIds.length} ${activeTab}.`);
+      setSelectedIds([]);
     } catch (err: any) {
-      triggerToast(`Delete failed: ${err.message}`, true);
+      triggerToast(`Bulk delete failed: ${err.message}`, true);
     }
   };
 
-  const handleDeleteRequirement = async (reqId: string, title: string) => {
-    if (!window.confirm(`Are you sure you want to delete project brief "${title}"?`)) return;
+  const handleToggleProposalRating = async (proposalId: string, enabled: boolean) => {
     try {
-      const { error } = await supabase.from('requirements').delete().eq('id', reqId);
+      const { error } = await supabase
+        .from('proposals')
+        .update({ rating_enabled: enabled })
+        .eq('id', proposalId);
       if (error) throw error;
-      setRequirements(prev => prev.filter(r => r.id !== reqId));
-      triggerToast(`Project "${title}" deleted successfully.`);
+      setProposals(prev => prev.map(p => p.id === proposalId ? { ...p, ratingEnabled: enabled } : p));
+      triggerToast(`Rating access ${enabled ? 'enabled' : 'disabled'} successfully.`);
     } catch (err: any) {
-      triggerToast(`Delete failed: ${err.message}`, true);
-    }
-  };
-
-  const handleDeleteProposal = async (propId: string, profName: string) => {
-    if (!window.confirm(`Are you sure you want to delete proposal bid by "${profName}"?`)) return;
-    try {
-      const { error } = await supabase.from('proposals').delete().eq('id', propId);
-      if (error) throw error;
-      setProposals(prev => prev.filter(p => p.id !== propId));
-      triggerToast(`Proposal from "${profName}" deleted successfully.`);
-    } catch (err: any) {
-      triggerToast(`Delete failed: ${err.message}`, true);
+      triggerToast(`Update failed: ${err.message}`, true);
     }
   };
 
@@ -273,16 +303,27 @@ export const AdminPanel: React.FC = () => {
           {/* Main Grid View */}
           <div className="flex-1 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
             
-            {/* Search filter */}
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder={`Search ${activeTab}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-              />
+            {/* Search filter & Bulk actions */}
+            <div className="flex items-center space-x-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder={`Search ${activeTab}...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
+                />
+              </div>
+              {selectedIds.length > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer shadow-sm"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Selected ({selectedIds.length})</span>
+                </button>
+              )}
             </div>
 
             {loading ? (
@@ -301,46 +342,75 @@ export const AdminPanel: React.FC = () => {
                   {activeTab === 'users' && (
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px]">
+                        <th className="p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={filteredItems.length > 0 && filteredItems.every(item => selectedIds.includes(item.id))}
+                            onChange={handleSelectAll}
+                            className="rounded border-slate-300 text-[#4A3728] focus:ring-[#4A3728]"
+                          />
+                        </th>
                         <th className="p-3">User ID</th>
                         <th className="p-3">Full Name</th>
                         <th className="p-3">Designation Role</th>
-                        <th className="p-3 text-right">Control Action</th>
                       </tr>
                     </thead>
                   )}
                   {activeTab === 'professionals' && (
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px]">
+                        <th className="p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={filteredItems.length > 0 && filteredItems.every(item => selectedIds.includes(item.id))}
+                            onChange={handleSelectAll}
+                            className="rounded border-slate-300 text-[#4A3728] focus:ring-[#4A3728]"
+                          />
+                        </th>
                         <th className="p-3">Expert ID</th>
                         <th className="p-3">Name</th>
                         <th className="p-3">Category</th>
                         <th className="p-3">Rating</th>
                         <th className="p-3">Location</th>
-                        <th className="p-3 text-right">Control Action</th>
                       </tr>
                     </thead>
                   )}
                   {activeTab === 'requirements' && (
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px]">
+                        <th className="p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={filteredItems.length > 0 && filteredItems.every(item => selectedIds.includes(item.id))}
+                            onChange={handleSelectAll}
+                            className="rounded border-slate-300 text-[#4A3728] focus:ring-[#4A3728]"
+                          />
+                        </th>
                         <th className="p-3">Req ID</th>
                         <th className="p-3">Project Title</th>
                         <th className="p-3">Category</th>
                         <th className="p-3">Status</th>
                         <th className="p-3">Location</th>
-                        <th className="p-3 text-right">Control Action</th>
                       </tr>
                     </thead>
                   )}
                   {activeTab === 'proposals' && (
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px]">
+                        <th className="p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={filteredItems.length > 0 && filteredItems.every(item => selectedIds.includes(item.id))}
+                            onChange={handleSelectAll}
+                            className="rounded border-slate-300 text-[#4A3728] focus:ring-[#4A3728]"
+                          />
+                        </th>
                         <th className="p-3">Bid ID</th>
                         <th className="p-3">Professional</th>
                         <th className="p-3">Rate Est</th>
                         <th className="p-3">Timeline</th>
                         <th className="p-3">Status</th>
-                        <th className="p-3 text-right">Control Action</th>
+                        <th className="p-3 text-right">Rating Control</th>
                       </tr>
                     </thead>
                   )}
@@ -348,7 +418,15 @@ export const AdminPanel: React.FC = () => {
                   {/* Tab-dependent rows */}
                   <tbody>
                     {activeTab === 'users' && (filteredItems as AdminUser[]).map(u => (
-                      <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <tr key={u.id} className={`border-b border-slate-100 hover:bg-slate-50/50 transition-colors ${selectedIds.includes(u.id) ? 'bg-amber-50/30' : ''}`}>
+                        <td className="p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(u.id)}
+                            onChange={() => handleToggleSelect(u.id)}
+                            className="rounded border-slate-300 text-[#4A3728] focus:ring-[#4A3728]"
+                          />
+                        </td>
                         <td className="p-3 font-mono text-[10px] text-slate-400 select-all max-w-[120px] truncate">{u.id}</td>
                         <td className="p-3 font-bold text-slate-900">{u.name}</td>
                         <td className="p-3">
@@ -358,20 +436,19 @@ export const AdminPanel: React.FC = () => {
                             {u.role}
                           </span>
                         </td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => handleDeleteUser(u.id, u.name)}
-                            className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
-                            title="Delete User Profile"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
                       </tr>
                     ))}
 
                     {activeTab === 'professionals' && (filteredItems as Professional[]).map(p => (
-                      <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <tr key={p.id} className={`border-b border-slate-100 hover:bg-slate-50/50 transition-colors ${selectedIds.includes(p.id) ? 'bg-amber-50/30' : ''}`}>
+                        <td className="p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(p.id)}
+                            onChange={() => handleToggleSelect(p.id)}
+                            className="rounded border-slate-300 text-[#4A3728] focus:ring-[#4A3728]"
+                          />
+                        </td>
                         <td className="p-3 font-mono text-[10px] text-slate-400 select-all max-w-[120px] truncate">{p.id}</td>
                         <td className="p-3 font-bold text-slate-900">{p.name}</td>
                         <td className="p-3">
@@ -381,20 +458,19 @@ export const AdminPanel: React.FC = () => {
                         </td>
                         <td className="p-3 font-bold text-amber-700">★ {p.rating}</td>
                         <td className="p-3 text-slate-500 font-medium">{p.location}</td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => handleDeleteProfessional(p.id, p.name)}
-                            className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
-                            title="Delete Professional Listing"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
                       </tr>
                     ))}
 
                     {activeTab === 'requirements' && (filteredItems as ProjectRequirement[]).map(r => (
-                      <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <tr key={r.id} className={`border-b border-slate-100 hover:bg-slate-50/50 transition-colors ${selectedIds.includes(r.id) ? 'bg-amber-50/30' : ''}`}>
+                        <td className="p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(r.id)}
+                            onChange={() => handleToggleSelect(r.id)}
+                            className="rounded border-slate-300 text-[#4A3728] focus:ring-[#4A3728]"
+                          />
+                        </td>
                         <td className="p-3 font-mono text-[10px] text-slate-400 select-all max-w-[120px] truncate">{r.id}</td>
                         <td className="p-3 font-bold text-slate-900">{r.title}</td>
                         <td className="p-3 font-medium text-slate-500">{r.category}</td>
@@ -406,20 +482,19 @@ export const AdminPanel: React.FC = () => {
                           </span>
                         </td>
                         <td className="p-3 text-slate-500 font-medium">{r.location}</td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => handleDeleteRequirement(r.id, r.title)}
-                            className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
-                            title="Delete Project Brief"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
                       </tr>
                     ))}
 
                     {activeTab === 'proposals' && (filteredItems as Proposal[]).map(p => (
-                      <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <tr key={p.id} className={`border-b border-slate-100 hover:bg-slate-50/50 transition-colors ${selectedIds.includes(p.id) ? 'bg-amber-50/30' : ''}`}>
+                        <td className="p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(p.id)}
+                            onChange={() => handleToggleSelect(p.id)}
+                            className="rounded border-slate-300 text-[#4A3728] focus:ring-[#4A3728]"
+                          />
+                        </td>
                         <td className="p-3 font-mono text-[10px] text-slate-400 select-all max-w-[120px] truncate">{p.id}</td>
                         <td className="p-3 font-bold text-slate-900">{p.professionalName}</td>
                         <td className="p-3 font-bold text-slate-600">₹{p.priceEstimateTotal.toLocaleString('en-IN')}</td>
@@ -432,13 +507,19 @@ export const AdminPanel: React.FC = () => {
                           </span>
                         </td>
                         <td className="p-3 text-right">
-                          <button
-                            onClick={() => handleDeleteProposal(p.id, p.professionalName)}
-                            className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
-                            title="Delete Proposal Bid"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {p.status === 'Accepted' && (
+                            <button
+                              onClick={() => handleToggleProposalRating(p.id, !p.ratingEnabled)}
+                              className={`px-2.5 py-1.5 rounded-lg font-bold text-[10px] transition-all cursor-pointer shadow-xs border ${
+                                p.ratingEnabled
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                  : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'
+                              }`}
+                              title={p.ratingEnabled ? "Click to Disable Client Rating" : "Click to Enable Client Rating"}
+                            >
+                              {p.ratingEnabled ? "★ Rating Enabled" : "☆ Enable Rating"}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

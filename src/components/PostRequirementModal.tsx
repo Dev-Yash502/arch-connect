@@ -19,7 +19,7 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
     title: initialEstimate
       ? `Custom Modern Villa Residence (${initialEstimate.areaSqFt} sq.ft)`
       : 'Modern 3-Story Residence Project',
-    category: 'Architects' as ProfessionalCategory | 'All-in-One Turnkey',
+    category: 'Architect' as ProfessionalCategory | 'All-in-One Turnkey',
     builtUpAreaSqFt: initialEstimate ? initialEstimate.areaSqFt : 3500,
     location: 'Dehradun',
     budgetRange: initialEstimate
@@ -115,10 +115,10 @@ export const PostRequirementModal: React.FC<PostRequirementModalProps> = ({
                   onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
                   className="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
                 >
-                  <option value="Architects">Architects (Elevation & Blueprints)</option>
-                  <option value="Interior Designers">Interior Designers (Turnkey Fitout)</option>
-                  <option value="Civil Engineers">Civil Engineers (Structural Execution)</option>
-                  <option value="Material Providers">Material Providers (Slate, Glass, Teak)</option>
+                  <option value="Architect">Architect (Elevation & Blueprints)</option>
+                  <option value="Interior Designer">Interior Designer (Turnkey Fitout)</option>
+                  <option value="Civil Engineer">Civil Engineer (Structural Execution)</option>
+                  <option value="Material Provider">Material Provider (Slate, Glass, Teak)</option>
                   <option value="All-in-One Turnkey">All-in-One Turnkey Team</option>
                 </select>
               </div>
