@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from '../lib/supabase';
 import {
   User,
   Plus,
@@ -22,7 +23,7 @@ import {
   Send,
   Loader2
 } from 'lucide-react';
-import { Professional, ProfessionalCategory, PortfolioItem, ProjectRequirement, Proposal, AuthUser } from '../types';
+import { Professional, ProfessionalCategory, PortfolioItem, ProjectRequirement, Proposal, AuthUser, ActiveProject, Review } from '../types';
 
 interface ProfessionalPortalProps {
   professionals: Professional[];
@@ -33,6 +34,9 @@ interface ProfessionalPortalProps {
   onAddProposal?: (proposal: Proposal) => void;
   currentUser?: AuthUser | null;
   profsLoaded?: boolean;
+  activeProjects?: ActiveProject[];
+  reviews?: Review[];
+  onUpdateActiveProject?: (project: ActiveProject) => void;
 }
 
 export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
@@ -43,7 +47,10 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
   onSelectViewDirectory,
   onAddProposal,
   currentUser,
-  profsLoaded = true
+  profsLoaded = true,
+  activeProjects = [],
+  reviews = [],
+  onUpdateActiveProject
 }) => {
   if (!profsLoaded) {
     return (
@@ -54,7 +61,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
     );
   }
 
-  const [activePortalTab, setActivePortalTab] = useState<'portfolio' | 'requests'>('portfolio');
+  const [activePortalTab, setActivePortalTab] = useState<'portfolio' | 'requests' | 'projects'>('portfolio');
   const [expressedInterest, setExpressedInterest] = useState<Set<string>>(new Set());
 
   const openRequirements = requirements.filter(r => r.status === 'Open for Bids');
@@ -95,10 +102,242 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [emailOtp, setEmailOtp] = useState('');
 
-  const [docUploaded, setDocUploaded] = useState(false);
-  const [docFileName, setDocFileName] = useState('');
-  const [licenseType, setLicenseType] = useState('COA Architect Registration');
+  // Document states
+  const [aadhaarNumber, setAadhaarNumber] = useState('');
+  const [aadhaarFileName, setAadhaarFileName] = useState('');
+  const [aadhaarUploaded, setAadhaarUploaded] = useState(false);
+
+  const [panNumber, setPanNumber] = useState('');
+  const [panFileName, setPanFileName] = useState('');
+  const [panUploaded, setPanUploaded] = useState(false);
+
+  const [licenseType, setLicenseType] = useState('COA Architect License');
   const [licenseId, setLicenseId] = useState('');
+  const [licenseFileName, setLicenseFileName] = useState('');
+  const [licenseUploaded, setLicenseUploaded] = useState(false);
+
+  const [docApproved, setDocApproved] = useState(false);
+  const [docRejected, setDocRejected] = useState(false);
+
+  const [aadhaarFileUrl, setAadhaarFileUrl] = useState('');
+  const [panFileUrl, setPanFileUrl] = useState('');
+  const [licenseFileUrl, setLicenseFileUrl] = useState('');
+
+  const [uploadingAadhaar, setUploadingAadhaar] = useState(false);
+  const [uploadingPan, setUploadingPan] = useState(false);
+  const [uploadingLicense, setUploadingLicense] = useState(false);
+  const [uploadingProjImage, setUploadingProjImage] = useState(false);
+  const [uploadingSitePhotoId, setUploadingSitePhotoId] = useState<string | null>(null);
+
+  const getRequiredDocsForRole = (roleCategory: string) => {
+    switch (roleCategory) {
+      case 'Architect':
+        return {
+          title: 'Architect Verification Requirements',
+          licenseName: 'COA Architect License',
+          licenseDesc: 'Council of Architecture (COA) registration certificate is mandatory.',
+          placeholder: 'e.g. CA/2012/54687',
+          requiredList: [
+            'Aadhaar Card (Individual Identity Proof)',
+            'PAN Card (Tax Registration Proof)',
+            'COA Registration Certificate (Valid Council License)'
+          ]
+        };
+      case 'Civil Engineer':
+        return {
+          title: 'Civil Engineer Verification Requirements',
+          licenseName: 'Civil Engineering Degree',
+          licenseDesc: 'Engineering Degree certificate (B.E./B.Tech) or Municipal License is required.',
+          placeholder: 'e.g. BTECH/CIVIL/2015/098',
+          requiredList: [
+            'Aadhaar Card (Individual Identity Proof)',
+            'PAN Card (Tax Registration Proof)',
+            'Civil Engineering B.E./B.Tech Certificate or Municipal Authority License'
+          ]
+        };
+      case 'Interior Designer':
+        return {
+          title: 'Interior Designer Verification Requirements',
+          licenseName: 'Interior Design Certification',
+          licenseDesc: 'Interior design degree/diploma or professional association certificate.',
+          placeholder: 'e.g. NID/ID/2018/342',
+          requiredList: [
+            'Aadhaar Card (Individual Identity Proof)',
+            'PAN Card (Tax Registration Proof)',
+            'Interior Design Degree/Diploma Copy or Association Membership Certificate'
+          ]
+        };
+      case 'Material Provider':
+      default:
+        return {
+          title: 'Contractor & Material Provider Requirements',
+          licenseName: 'GSTIN / Business License',
+          licenseDesc: 'GSTIN Certificate or MSME/Business License copy is required.',
+          placeholder: 'e.g. 05AAAAA1111A1Z1',
+          requiredList: [
+            'Owner Aadhaar Card (Identity Proof)',
+            'Company/Owner PAN Card',
+            'GSTIN Registration Certificate or MSME / Business Incorporation Certificate'
+          ]
+        };
+    }
+  };
+
+  const requirementsInfo = getRequiredDocsForRole(role);
+
+  const uploadVerificationDoc = async (docType: 'aadhaar' | 'pan' | 'license', file: File) => {
+    const profId = currentProf?.id || currentUser?.id || 'unknown';
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${profId}_${docType}_${Date.now()}.${fileExt}`;
+    const filePath = `verification-docs/${profId}/${fileName}`;
+
+    if (docType === 'aadhaar') setUploadingAadhaar(true);
+    else if (docType === 'pan') setUploadingPan(true);
+    else if (docType === 'license') setUploadingLicense(true);
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('verification-docs')
+        .upload(filePath, file, { upsert: true, cacheControl: '3600' });
+
+      if (error) {
+        throw error;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('verification-docs')
+        .getPublicUrl(filePath);
+
+      if (docType === 'aadhaar') {
+        setAadhaarUploaded(true);
+        setAadhaarFileName(file.name);
+        setAadhaarFileUrl(publicUrl);
+      } else if (docType === 'pan') {
+        setPanUploaded(true);
+        setPanFileName(file.name);
+        setPanFileUrl(publicUrl);
+      } else if (docType === 'license') {
+        setLicenseUploaded(true);
+        setLicenseFileName(file.name);
+        setLicenseFileUrl(publicUrl);
+      }
+    } catch (err: any) {
+      console.warn("Storage bucket upload failed, using fallback Base64 / Local URL:", err.message);
+      
+      const localUrl = URL.createObjectURL(file);
+      if (docType === 'aadhaar') {
+        setAadhaarUploaded(true);
+        setAadhaarFileName(file.name);
+        setAadhaarFileUrl(localUrl);
+      } else if (docType === 'pan') {
+        setPanUploaded(true);
+        setPanFileName(file.name);
+        setPanFileUrl(localUrl);
+      } else if (docType === 'license') {
+        setLicenseUploaded(true);
+        setLicenseFileName(file.name);
+        setLicenseFileUrl(localUrl);
+      }
+    } finally {
+      if (docType === 'aadhaar') setUploadingAadhaar(false);
+      else if (docType === 'pan') setUploadingPan(false);
+      else if (docType === 'license') setUploadingLicense(false);
+    }
+  };
+
+  const handleUploadProjImage = async (file: File) => {
+    const profId = currentProf?.id || currentUser?.id || 'unknown';
+    const fileExt = file.name.split('.').pop();
+    const fileName = `project_${Date.now()}.${fileExt}`;
+    const filePath = `portfolio-images/${profId}/${fileName}`;
+
+    setUploadingProjImage(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from('verification-docs')
+        .upload(filePath, file, { upsert: true, cacheControl: '3600' });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('verification-docs')
+        .getPublicUrl(filePath);
+
+      setProjImage(publicUrl);
+    } catch (err: any) {
+      console.warn("Portfolio image upload failed, falling back to local base64:", err.message);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProjImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingProjImage(false);
+    }
+  };
+
+  const handleUploadSitePhoto = async (project: ActiveProject, file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `site_${Date.now()}.${fileExt}`;
+    const filePath = `site-photos/${project.id}/${fileName}`;
+
+    setUploadingSitePhotoId(project.id);
+    try {
+      const { data, error } = await supabase.storage
+        .from('verification-docs')
+        .upload(filePath, file, { upsert: true, cacheControl: '3600' });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('verification-docs')
+        .getPublicUrl(filePath);
+
+      const newPhoto = {
+        url: publicUrl,
+        caption: prompt("Enter a description/caption for this photo:", "Foundation work completed") || "Site Update",
+        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      };
+
+      const updatedPhotos = [...(project.sitePhotos || []), newPhoto];
+      onUpdateActiveProject?.({
+        ...project,
+        sitePhotos: updatedPhotos
+      });
+    } catch (err: any) {
+      console.warn("Site photo upload failed, using local fallback URL:", err.message);
+      
+      const localUrl = URL.createObjectURL(file);
+      const newPhoto = {
+        url: localUrl,
+        caption: prompt("Enter a description/caption for this photo:", "Foundation work completed") || "Site Update",
+        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      };
+
+      const updatedPhotos = [...(project.sitePhotos || []), newPhoto];
+      onUpdateActiveProject?.({
+        ...project,
+        sitePhotos: updatedPhotos
+      });
+    } finally {
+      setUploadingSitePhotoId(null);
+    }
+  };
+
+  // Sync default licenseType with role changes
+  React.useEffect(() => {
+    if (!licenseUploaded) {
+      if (role === 'Architect') {
+        setLicenseType('COA Architect License');
+      } else if (role === 'Civil Engineer') {
+        setLicenseType('Civil Engineering Degree');
+      } else if (role === 'Interior Designer') {
+        setLicenseType('Interior Design Certification');
+      } else {
+        setLicenseType('GSTIN / Business License');
+      }
+    }
+  }, [role, licenseUploaded]);
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -121,21 +360,44 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
       setPhoneVerified(currentProf.phone ? true : false);
       setEmailVerified(currentProf.email ? true : false);
       
-      // Parse mock document verification fields from localstorage/metadata if available (or keep defaults)
+      // Sync from currentProf database entity, fallback to localStorage
       const cachedDoc = localStorage.getItem(`prof_doc_${currentProf.id}`);
+      let parsedCached: any = null;
       if (cachedDoc) {
-        try {
-          const parsed = JSON.parse(cachedDoc);
-          setDocUploaded(parsed.uploaded || false);
-          setDocFileName(parsed.fileName || '');
-          setLicenseType(parsed.licenseType || 'COA Architect Registration');
-          setLicenseId(parsed.licenseId || '');
-        } catch (e) {}
-      } else {
-        setDocUploaded(false);
-        setDocFileName('');
-        setLicenseId('');
+        try { parsedCached = JSON.parse(cachedDoc); } catch (e) {}
       }
+
+      const dbAadhaarNum = currentProf.aadhaarNumber || parsedCached?.aadhaarNumber || '';
+      const dbAadhaarFile = currentProf.aadhaarFileName || parsedCached?.aadhaarFileName || '';
+      const dbAadhaarUrl = currentProf.aadhaarFileUrl || parsedCached?.aadhaarFileUrl || '';
+
+      const dbPanNum = currentProf.panNumber || parsedCached?.panNumber || '';
+      const dbPanFile = currentProf.panFileName || parsedCached?.panFileName || '';
+      const dbPanUrl = currentProf.panFileUrl || parsedCached?.panFileUrl || '';
+
+      const dbLicenseType = currentProf.licenseType || parsedCached?.licenseType || (currentProf.role === 'Architect' ? 'COA Architect License' : currentProf.role === 'Civil Engineer' ? 'Civil Engineering Degree' : currentProf.role === 'Interior Designer' ? 'Interior Design Certification' : 'GSTIN / Business License');
+      const dbLicenseId = currentProf.licenseId || parsedCached?.licenseId || '';
+      const dbLicenseFile = currentProf.licenseFileName || parsedCached?.licenseFileName || '';
+      const dbLicenseUrl = currentProf.licenseFileUrl || parsedCached?.licenseFileUrl || '';
+
+      setAadhaarNumber(dbAadhaarNum);
+      setAadhaarFileName(dbAadhaarFile);
+      setAadhaarFileUrl(dbAadhaarUrl);
+      setAadhaarUploaded(!!dbAadhaarFile);
+
+      setPanNumber(dbPanNum);
+      setPanFileName(dbPanFile);
+      setPanFileUrl(dbPanUrl);
+      setPanUploaded(!!dbPanFile);
+
+      setLicenseType(dbLicenseType);
+      setLicenseId(dbLicenseId);
+      setLicenseFileName(dbLicenseFile);
+      setLicenseFileUrl(dbLicenseUrl);
+      setLicenseUploaded(!!dbLicenseFile);
+
+      setDocApproved(currentProf.verificationStatus === 'approved' || parsedCached?.approved || false);
+      setDocRejected(currentProf.verificationStatus === 'rejected' || parsedCached?.rejected || false);
 
       setIsEditingProfile(false);
     } else if (currentUser) {
@@ -145,6 +407,7 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
       setTitle('');
       setExperienceYears(5);
       setPricePerSqFt(100);
+      setLocation('Dejadun'); // wait, let's keep original location Dehradun
       setLocation('Dehradun');
       setBio('');
       setSpecialtiesText('');
@@ -152,9 +415,21 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
       setPhone('');
       setPhoneVerified(false);
       setEmailVerified(currentUser.email ? true : false);
-      setDocUploaded(false);
-      setDocFileName('');
+      setAadhaarNumber('');
+      setAadhaarFileName('');
+      setAadhaarFileUrl('');
+      setAadhaarUploaded(false);
+      setPanNumber('');
+      setPanFileName('');
+      setPanFileUrl('');
+      setPanUploaded(false);
+      setLicenseType('COA Architect License');
       setLicenseId('');
+      setLicenseFileName('');
+      setLicenseFileUrl('');
+      setLicenseUploaded(false);
+      setDocApproved(false);
+      setDocRejected(false);
       setPortfolio([]);
       setIsEditingProfile(true);
     }
@@ -205,15 +480,37 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
       rating: currentProf?.rating || 5.0,
       reviewCount: currentProf?.reviewCount || 1,
       completedProjectsCount: currentProf?.completedProjectsCount || 0,
-      badge: currentProf?.badge || 'Verified'
+      badge: currentProf?.badge,
+      verificationStatus: docApproved ? 'approved' : (aadhaarUploaded || panUploaded || licenseUploaded) ? 'pending' : 'unverified',
+      aadhaarNumber,
+      aadhaarFileName,
+      aadhaarFileUrl,
+      panNumber,
+      panFileName,
+      panFileUrl,
+      licenseType,
+      licenseId,
+      licenseFileName,
+      licenseFileUrl
     };
 
     // Save verification docs metadata
     const docData = {
-      uploaded: docUploaded,
-      fileName: docFileName,
+      aadhaarNumber,
+      aadhaarFileName,
+      aadhaarFileUrl,
+      aadhaarUploaded,
+      panNumber,
+      panFileName,
+      panFileUrl,
+      panUploaded,
       licenseType,
-      licenseId
+      licenseId,
+      licenseFileName,
+      licenseFileUrl,
+      licenseUploaded,
+      approved: docApproved,
+      rejected: docRejected
     };
     localStorage.setItem(`prof_doc_${updated.id}`, JSON.stringify(docData));
 
@@ -282,7 +579,189 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
               </span>
             )}
           </button>
+          <button
+            onClick={() => setActivePortalTab('projects')}
+            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+              activePortalTab === 'projects'
+                ? 'bg-[#4A3728] text-white shadow-md'
+                : 'text-slate-600 hover:text-[#4A3728]'
+            }`}
+          >
+            <Building className="w-4 h-4" />
+            Active Projects Tracker ({activeProjects.filter(p => p.professionalId === currentProf?.id).length})
+          </button>
         </div>
+
+        {/* ─── ACTIVE PROJECTS TAB ─── */}
+        {activePortalTab === 'projects' && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-200 pb-4">
+              <h2 className="font-display font-extrabold text-2xl text-[#4A3728]">Matched Projects Progress Tracker</h2>
+              <p className="text-sm text-slate-500 mt-0.5">Manage project deliverables, toggle milestone checklists, release bills, and upload progress photos.</p>
+            </div>
+
+            {activeProjects.filter(p => p.professionalId === currentProf?.id).length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 p-8 space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-[#FDF8F0] flex items-center justify-center mx-auto text-slate-400">
+                  <Building className="w-8 h-8" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-display font-bold text-[#4A3728] text-base">No Matched Projects Yet</h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    Once a client accepts your submitted bid / proposal from the "Client Requests" tab, the active project dashboard will generate here automatically.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {activeProjects.filter(p => p.professionalId === currentProf?.id).map((project) => {
+                  return (
+                    <div key={project.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
+                      
+                      {/* Project Header Card */}
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-display font-extrabold text-base text-[#4A3728]">{project.name}</h3>
+                            <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200">
+                              Status: {project.overallProgress}% Complete
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Client: <strong>{project.clientName}</strong></span>
+                            <span className="text-slate-300">|</span>
+                            <span>Location: <strong>{project.location}</strong></span>
+                            <span className="text-slate-300">|</span>
+                            <span>Completion Target: {project.estimatedCompletion}</span>
+                          </p>
+                        </div>
+                        
+                        {/* Overall Completion Bar */}
+                        <div className="w-full md:w-64 space-y-1">
+                          <div className="flex justify-between text-[10px] font-bold text-slate-600">
+                            <span>Overall Progress</span>
+                            <span>{project.overallProgress}%</span>
+                          </div>
+                          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-600 rounded-full transition-all duration-500" style={{ width: `${project.overallProgress}%` }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Budget Tracker & Payment Status */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block leading-none">Total Contract Value</span>
+                          <span className="text-xl font-bold text-slate-900">₹{project.totalBudget.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block leading-none">Amount Cleared / Paid</span>
+                          <span className="text-xl font-bold text-emerald-700">₹{project.amountPaid.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block leading-none">Pending Balance</span>
+                          <span className="text-xl font-bold text-amber-700">₹{(project.totalBudget - project.amountPaid).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
+
+                      {/* Milestones Control Panel */}
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Milestones Management Checklist</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {project.milestones.map((milestone) => (
+                            <div key={milestone.id} className="p-3 bg-[#FDF8F0] border border-[#F3EBE1] rounded-xl flex items-center justify-between gap-3 hover:border-[#C4A882]/40 transition-colors">
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                                    milestone.status === 'Completed' ? 'bg-emerald-500' : milestone.status === 'In Progress' ? 'bg-amber-500' : 'bg-slate-300'
+                                  }`} />
+                                  <span className="text-xs font-bold text-slate-800 truncate">{milestone.title}</span>
+                                </div>
+                                <div className="text-[9.5px] text-slate-400 pl-3.5">
+                                  Weight: {milestone.percentageWeight}% | Target: {milestone.targetDate}
+                                </div>
+                              </div>
+                              
+                              <select
+                                value={milestone.status}
+                                onChange={(e) => {
+                                  const newStatus = e.target.value as 'Completed' | 'In Progress' | 'Upcoming';
+                                  const updatedMilestones = project.milestones.map(m => m.id === milestone.id ? { ...m, status: newStatus } : m);
+                                  
+                                  // Recalculate overall progress as sum of weights of completed milestones
+                                  const newProgress = updatedMilestones.reduce((acc, m) => m.status === 'Completed' ? acc + m.percentageWeight : acc, 0);
+                                  
+                                  onUpdateActiveProject?.({
+                                    ...project,
+                                    milestones: updatedMilestones,
+                                    overallProgress: newProgress
+                                  });
+                                }}
+                                className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#4A3728]"
+                              >
+                                <option value="Upcoming">Upcoming</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                              </select>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Site Progress Photos Upload & Gallery */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Site Inspection Photos</h4>
+                          
+                          {/* File upload input wrapper */}
+                          {uploadingSitePhotoId === project.id ? (
+                            <div className="flex items-center gap-1 text-[10.5px] text-slate-400 font-bold bg-slate-50 px-3 py-1 border border-slate-200 rounded-full">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#9B7B5A]" />
+                              <span>Uploading Photo...</span>
+                            </div>
+                          ) : (
+                            <label className="px-3 py-1 bg-[#9B7B5A] hover:bg-[#7A5C45] text-white font-bold text-[10px] rounded-full cursor-pointer flex items-center space-x-1.5 shadow-2xs font-sans">
+                              <span>📤 Upload Site Photo</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleUploadSitePhoto(project, file);
+                                  }
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                        {project.sitePhotos.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic">No progress photos uploaded yet. Upload a site photo above to notify the homeowner of design/construction updates.</p>
+                        ) : (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {project.sitePhotos.map((photo, idx) => (
+                              <div key={idx} className="group relative rounded-xl overflow-hidden border border-slate-200 aspect-4/3 bg-slate-100">
+                                <img src={photo.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 text-white text-[9.5px] font-medium">
+                                  <p className="truncate font-bold">{photo.caption}</p>
+                                  <p className="opacity-70 mt-0.5">{photo.date}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ─── CLIENT REQUESTS TAB ─── */}
         {activePortalTab === 'requests' && (
@@ -786,98 +1265,261 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
                 {/* Tab 3: Document Verification */}
                 {activeEditTab === 'document' && (
                   <div className="space-y-4 animate-fade-in text-[#2C1F14]">
-                    <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-xs font-bold uppercase text-slate-700">Official License Certification</h4>
-                          <p className="text-[10px] text-slate-400 mt-0.5">Upload COA registration, GSTIN, or engineering license copy</p>
+                    {docApproved ? (
+                      <div className="p-8 bg-emerald-50/70 border border-emerald-200 rounded-3xl text-center space-y-3">
+                        <div className="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center mx-auto">
+                          <CheckCircle2 className="w-6 h-6" />
                         </div>
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                          docUploaded
-                            ? 'bg-amber-50 text-amber-900 border-amber-200'
-                            : 'bg-slate-100 text-slate-500 border-slate-200'
-                        }`}>
-                          {docUploaded ? 'Pending Review' : 'Missing Documents'}
-                        </span>
+                        <h4 className="font-bold text-emerald-800 text-sm">Profile Verified & Approved!</h4>
+                        <p className="text-xs text-emerald-700 max-w-sm mx-auto leading-relaxed">
+                          Your verification documents (Aadhaar Card, PAN Card, and Professional License) have been reviewed and approved by the platform administrators. Your profile now displays the "Verified" badge.
+                        </p>
                       </div>
+                    ) : (
+                      <>
+                        {docRejected && (
+                          <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 font-semibold leading-relaxed">
+                            ❌ Verification Rejected: Your previously submitted documents were rejected by the administration team. Please review requirements and upload correct and valid copies.
+                          </div>
+                        )}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">License Type</label>
-                          <select
-                            value={licenseType}
-                            onChange={(e) => setLicenseType(e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
-                          >
-                            <option value="COA Architect Registration">COA Architect License</option>
-                            <option value="GSTIN Number">GSTIN Certificate</option>
-                            <option value="Civil Engineering Certification">Engineering Degree</option>
-                            <option value="Design Institute Diploma">Diploma / Certification</option>
-                          </select>
+                        {/* Requirements List (Auto-Fetched) */}
+                        <div className="bg-amber-900/5 border border-amber-900/10 rounded-2xl p-4.5 space-y-3">
+                          <div className="flex items-center gap-2.5 text-[#4A3728]">
+                            <ShieldCheck className="w-5 h-5 text-[#9B7B5A]" />
+                            <h5 className="font-bold text-sm">{requirementsInfo.title}</h5>
+                          </div>
+                          <p className="text-xs text-slate-500 leading-relaxed">
+                            Your profile is registered as <strong className="text-[#4A3728]">{role}</strong>. Please provide the following details and upload documents to get verified:
+                          </p>
+                          <ul className="text-xs text-slate-600 pl-1 space-y-1.5 list-disc list-inside">
+                            {requirementsInfo.requiredList.map((req, idx) => (
+                              <li key={idx} className="leading-snug">
+                                <span className="font-medium text-slate-700">{req}</span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
 
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Registration/License ID</label>
-                          <input
-                            type="text"
-                            value={licenseId}
-                            onChange={(e) => setLicenseId(e.target.value)}
-                            placeholder="e.g. CA/2012/54687"
-                            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Certificate Copy (PDF / Image)</label>
-                        <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-xl hover:bg-slate-100/50 transition-colors bg-white relative">
-                          {docUploaded ? (
-                            <div className="text-center space-y-1">
-                              <span className="text-xl">📄</span>
-                              <p className="text-xs font-bold text-[#4A3728]">{docFileName || 'license_certificate.pdf'}</p>
-                              <p className="text-[10px] text-slate-400">File uploaded successfully. Tap to replace.</p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setDocUploaded(false);
-                                  setDocFileName('');
-                                }}
-                                className="text-[10px] font-bold text-red-600 hover:underline pt-2 inline-block cursor-pointer"
-                              >
-                                Remove File
-                              </button>
+                        {/* Doc 1: Aadhaar Card */}
+                        <div className="p-5 bg-white border border-slate-200 rounded-2xl space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-xs font-bold uppercase text-slate-700">1. Aadhaar Card (Identity Proof)</h4>
+                              <p className="text-[10px] text-slate-400 mt-0.5">Please provide your 12-digit Aadhaar Number and upload front/back copy</p>
                             </div>
-                          ) : (
-                            <div className="text-center space-y-1">
-                              <span className="text-xl">📤</span>
-                              <p className="text-xs font-bold text-slate-500">Drag & Drop license file copy here</p>
-                              <p className="text-[10px] text-slate-400">PDF, JPG, PNG up to 10MB</p>
-                              <label className="mt-2 inline-block px-3 py-1 bg-[#4A3728] hover:bg-[#6B5040] text-white text-[10.5px] font-bold rounded-lg cursor-pointer transition-colors font-sans">
-                                Select Document File
-                                <input
-                                  type="file"
-                                  accept="image/*,application/pdf"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      setDocUploaded(true);
-                                      setDocFileName(file.name);
-                                    }
-                                  }}
-                                />
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                              aadhaarUploaded
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                            }`}>
+                              {aadhaarUploaded ? 'Uploaded' : 'Missing'}
+                            </span>
+                          </div>
 
-                      {docUploaded && (
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 leading-relaxed font-semibold">
-                          ⚠️ Note: Document uploaded. Our operations team will review your submitted registration copy and grant your "Verified" badge within 24 hours.
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Aadhaar Number</label>
+                              <input
+                                type="text"
+                                maxLength={12}
+                                value={aadhaarNumber}
+                                onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, ''))}
+                                placeholder="e.g. 1234 5678 9012"
+                                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Aadhaar Copy File</label>
+                              <div className="flex items-center justify-between p-2.5 border border-slate-200 rounded-lg bg-slate-50">
+                                {uploadingAadhaar ? (
+                                  <div className="flex items-center gap-2 text-xs text-slate-400 font-semibold py-1">
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#9B7B5A]" />
+                                    <span>Uploading to Storage...</span>
+                                  </div>
+                                ) : aadhaarUploaded ? (
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="text-xs font-bold text-[#4A3728] truncate max-w-[150px]" title={aadhaarFileName}>
+                                      📄 {aadhaarFileName}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => { setAadhaarUploaded(false); setAadhaarFileName(''); setAadhaarFileUrl(''); }}
+                                      className="text-[10px] font-bold text-red-600 hover:underline cursor-pointer"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <label className="text-[10.5px] font-bold text-[#9B7B5A] hover:text-[#7A5C45] cursor-pointer flex items-center gap-1">
+                                    <span>📤 Upload Aadhaar PDF/JPG</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*,application/pdf"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          uploadVerificationDoc('aadhaar', file);
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
+
+                        {/* Doc 2: PAN Card */}
+                        <div className="p-5 bg-white border border-slate-200 rounded-2xl space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-xs font-bold uppercase text-slate-700">2. PAN Card (Tax ID)</h4>
+                              <p className="text-[10px] text-slate-400 mt-0.5">Please provide your 10-digit Alphanumeric PAN Number and upload copy</p>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                              panUploaded
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                            }`}>
+                              {panUploaded ? 'Uploaded' : 'Missing'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">PAN Number</label>
+                              <input
+                                type="text"
+                                maxLength={10}
+                                value={panNumber}
+                                onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+                                placeholder="e.g. ABCDE1234F"
+                                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">PAN Copy File</label>
+                              <div className="flex items-center justify-between p-2.5 border border-slate-200 rounded-lg bg-slate-50">
+                                {uploadingPan ? (
+                                  <div className="flex items-center gap-2 text-xs text-slate-400 font-semibold py-1">
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#9B7B5A]" />
+                                    <span>Uploading to Storage...</span>
+                                  </div>
+                                ) : panUploaded ? (
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="text-xs font-bold text-[#4A3728] truncate max-w-[150px]" title={panFileName}>
+                                      📄 {panFileName}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => { setPanUploaded(false); setPanFileName(''); setPanFileUrl(''); }}
+                                      className="text-[10px] font-bold text-red-600 hover:underline cursor-pointer"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <label className="text-[10.5px] font-bold text-[#9B7B5A] hover:text-[#7A5C45] cursor-pointer flex items-center gap-1">
+                                    <span>📤 Upload PAN PDF/JPG</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*,application/pdf"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          uploadVerificationDoc('pan', file);
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Doc 3: License/Degree Registration (Role-specific) */}
+                        <div className="p-5 bg-white border border-slate-200 rounded-2xl space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-xs font-bold uppercase text-slate-700">3. {requirementsInfo.licenseName}</h4>
+                              <p className="text-[10px] text-slate-400 mt-0.5">{requirementsInfo.licenseDesc}</p>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                              licenseUploaded
+                                ? 'bg-[#4A3728]/10 text-[#4A3728] border-[#4A3728]/20'
+                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                            }`}>
+                              {licenseUploaded ? 'Pending Review' : 'Missing'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Registration/License ID</label>
+                              <input
+                                type="text"
+                                value={licenseId}
+                                onChange={(e) => setLicenseId(e.target.value)}
+                                placeholder={requirementsInfo.placeholder}
+                                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Certificate Copy File</label>
+                              <div className="flex items-center justify-between p-2.5 border border-slate-200 rounded-lg bg-slate-50">
+                                {uploadingLicense ? (
+                                  <div className="flex items-center gap-2 text-xs text-slate-400 font-semibold py-1">
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#9B7B5A]" />
+                                    <span>Uploading to Storage...</span>
+                                  </div>
+                                ) : licenseUploaded ? (
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="text-xs font-bold text-[#4A3728] truncate max-w-[150px]" title={licenseFileName}>
+                                      📄 {licenseFileName}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => { setLicenseUploaded(false); setLicenseFileName(''); setLicenseFileUrl(''); }}
+                                      className="text-[10px] font-bold text-red-600 hover:underline cursor-pointer"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <label className="text-[10.5px] font-bold text-[#9B7B5A] hover:text-[#7A5C45] cursor-pointer flex items-center gap-1">
+                                    <span>📤 Upload Certificate Copy</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*,application/pdf"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          uploadVerificationDoc('license', file);
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {(aadhaarUploaded || panUploaded || licenseUploaded) && (
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 leading-relaxed font-semibold">
+                            ⚠️ Note: Documents uploaded. Our operations team will review your submitted registration copy and grant your "Verified" badge within 24 hours.
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -1036,30 +1678,43 @@ export const ProfessionalPortal: React.FC<ProfessionalPortalProps> = ({
                   <div>
                     <label className="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">Project Cover Image</label>
                     <div className="flex items-center gap-2">
-                      <label className="px-3 py-1.5 bg-[#4A3728] hover:bg-[#6B5040] text-white text-xs font-bold rounded-lg cursor-pointer transition-colors inline-flex items-center space-x-1">
-                        <ImageIcon className="w-3.5 h-3.5" />
-                        <span>Choose File from Device</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setProjImage(reader.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </label>
-                      {projImage ? (
-                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                          Photo Selected ✓
-                        </span>
+                      {uploadingProjImage ? (
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#9B7B5A]" />
+                          <span>Uploading image...</span>
+                        </div>
                       ) : (
+                        <label className="px-3 py-1.5 bg-[#4A3728] hover:bg-[#6B5040] text-white text-xs font-bold rounded-lg cursor-pointer transition-colors inline-flex items-center space-x-1 font-sans">
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          <span>Choose File from Device</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                handleUploadProjImage(file);
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                      {projImage && !uploadingProjImage && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            Photo Uploaded ✓
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setProjImage('')}
+                            className="text-[9px] font-bold text-red-600 hover:underline"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      )}
+                      {!projImage && !uploadingProjImage && (
                         <span className="text-[10px] text-slate-400 font-medium">
                           No photo chosen
                         </span>

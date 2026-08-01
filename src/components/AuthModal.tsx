@@ -34,7 +34,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [showOtpScreen, setShowOtpScreen] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
   const [otpType, setOtpType] = useState<'signup' | 'email'>('signup');
 
   if (!isOpen) return null;
@@ -45,7 +44,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
     setName('');
     setError('');
     setShowOtpScreen(false);
-    setOtpCode('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,7 +104,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
         // 3b. No session → email confirmation still ON
         setOtpType('signup');
         setShowOtpScreen(true);
-        setError('✅ Sign up successful! We have sent a 6-digit confirmation code to your email. Please verify below.');
+        setError('✅ Sign up successful! We have sent a verification link to your email.');
         setLoading(false);
         return;
 
@@ -201,210 +199,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
     }
   };
 
-  const handleQuickLogin = async (targetRole: 'client' | 'professional' | 'admin') => {
-    setError('');
-    setLoading(true);
 
-    try {
-      if (targetRole === 'admin') {
-        const adminUser: AuthUser = {
-          id: 'admin-system',
-          name: 'Platform Administrator',
-          email: 'admin@archconnect.com',
-          role: 'admin',
-          joinedAt: new Date().toISOString()
-        };
-        localStorage.setItem('admin_session', JSON.stringify(adminUser));
-        setSuccess(true);
-        setTimeout(() => {
-          setSuccess(false);
-          onLogin(adminUser);
-          onClose();
-        }, 1000);
-        return;
-      }
-
-      const testEmail = targetRole === 'client' ? 'client@demo.com' : 'professional@demo.com';
-      const testPassword = 'password123';
-      const testName = targetRole === 'client' ? 'Demo Client User' : 'Demo Professional Expert';
-
-      // 1. Try to sign in
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: testEmail,
-        password: testPassword,
-      });
-
-      if (signInError) {
-        if (signInError.message.toLowerCase().includes('invalid login credentials') || signInError.message.toLowerCase().includes('not found')) {
-          // Auto signup
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: testEmail,
-            password: testPassword,
-            options: {
-              data: {
-                name: testName,
-                role: targetRole,
-              },
-            },
-          });
-
-          if (signUpError) throw signUpError;
-          if (!signUpData.user) throw new Error('Quick signup failed.');
-
-          // Insert into user_profiles
-          await supabase
-            .from('user_profiles')
-            .upsert({
-              id: signUpData.user.id,
-              name: testName,
-              role: targetRole as UserRole,
-            }, { onConflict: 'id' });
-
-          if (signUpData.session) {
-            const authUser: AuthUser = {
-              id: signUpData.user.id,
-              name: testName,
-              email: testEmail,
-              role: targetRole as UserRole,
-              joinedAt: signUpData.user.created_at,
-            };
-            setSuccess(true);
-            setTimeout(() => {
-              setSuccess(false);
-              onLogin(authUser);
-              onClose();
-            }, 1000);
-            return;
-          } else {
-            // Confirmation code fallback
-            setEmail(testEmail);
-            setPassword(testPassword);
-            setName(testName);
-            setRole(targetRole as any);
-            setOtpType('signup');
-            setShowOtpScreen(true);
-            setError('✅ Quick registration successful! A 6-digit confirmation code was sent to your email to verify.');
-            setLoading(false);
-            return;
-          }
-        } else {
-          throw signInError;
-        }
-      }
-
-      if (!signInData.user) throw new Error('Sign in failed.');
-
-      // Fetch profile
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('name, role, joined_at')
-        .eq('id', signInData.user.id)
-        .single();
-
-      if (!profile) {
-        await supabase
-          .from('user_profiles')
-          .upsert({
-            id: signInData.user.id,
-            name: testName,
-            role: targetRole as UserRole,
-          });
-      }
-
-      const authUser: AuthUser = {
-        id: signInData.user.id,
-        name: profile?.name || testName,
-        email: signInData.user.email!,
-        role: (profile?.role || targetRole) as UserRole,
-        joinedAt: profile?.joined_at || signInData.user.created_at,
-      };
-
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        onLogin(authUser);
-        onClose();
-      }, 1000);
-
-    } catch (err: any) {
-      setError(err.message ?? 'Quick login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const { data, error: verifyError } = await supabase.auth.verifyOtp({
-        email: email.trim().toLowerCase(),
-        token: otpCode.trim(),
-        type: otpType,
-      });
-
-      if (verifyError) throw verifyError;
-      if (!data.user) throw new Error('Verification failed — invalid session.');
-
-      // Sync profile metadata if it was signup
-      if (otpType === 'signup') {
-        await supabase
-          .from('user_profiles')
-          .upsert({
-            id: data.user.id,
-            name: name.trim() || 'User',
-            role: role as UserRole,
-          }, { onConflict: 'id' });
-      }
-
-      // Fetch profile to get name + role
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('name, role, joined_at')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError || !profile) {
-        throw new Error('Verification succeeded but profile is missing. Please contact administration.');
-      }
-
-      let avatar = undefined;
-      if (profile.role === 'professional') {
-        const { data: prof } = await supabase
-          .from('professionals')
-          .select('avatar')
-          .eq('owner_id', data.user.id)
-          .maybeSingle();
-        if (prof?.avatar) {
-          avatar = prof.avatar;
-        }
-      }
-
-      const authUser: AuthUser = {
-        id: data.user.id,
-        name: profile.name,
-        email: data.user.email!,
-        role: profile.role as UserRole,
-        joinedAt: profile.joined_at,
-        avatar: avatar,
-      };
-
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        setShowOtpScreen(false);
-        onLogin(authUser);
-        onClose();
-      }, 1200);
-
-    } catch (err: any) {
-      setError(err.message ?? 'Invalid verification code. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleResendOtp = async () => {
     setError('');
@@ -415,9 +210,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
         email: email.trim().toLowerCase(),
       });
       if (resendError) throw resendError;
-      setError('✅ A fresh verification code has been sent to your email.');
+      setError('✅ A fresh verification link has been sent to your email.');
     } catch (err: any) {
-      setError(err.message ?? 'Failed to resend code. Please try again later.');
+      setError(err.message ?? 'Failed to resend link. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -457,15 +252,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
             <p className="text-xs text-slate-500">Redirecting to your dashboard…</p>
           </div>
         ) : showOtpScreen ? (
-          <form onSubmit={handleVerifyOtp} className="p-6 space-y-5 animate-fade-in">
-            <div className="text-center space-y-2">
-              <h3 className="font-display font-bold text-base text-[#4A3728]">
+          <div className="p-6 space-y-6 text-center animate-fade-in">
+            <div className="w-16 h-16 bg-[#4A3728]/5 text-[#4A3728] rounded-full flex items-center justify-center mx-auto">
+              <Mail className="w-8 h-8 text-[#9B7B5A]" />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="font-display font-bold text-lg text-[#4A3728]">
                 Verify Your Email
               </h3>
               <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
-                We've sent a verification link and code to <strong className="text-[#4A3728]">{email}</strong>.
-                <br />
-                <span className="font-bold text-[#9B7B5A]">Click the confirmation link</span> in your email to verify instantly, or enter the 6-digit code below if you have configured SMTP.
+                We have sent a confirmation link to <strong className="text-[#4A3728]">{email}</strong>.
+              </p>
+              <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed font-medium">
+                Please check your inbox and click the verification link. Once verified, this page will automatically log you in.
               </p>
             </div>
 
@@ -479,55 +279,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
               </p>
             )}
 
-            <div>
-              <label className="block text-xs font-bold text-slate-600 uppercase mb-1.5 text-center">
-                6-Digit Verification Code
-              </label>
-              <input
-                type="text"
-                required
-                maxLength={6}
-                pattern="\d{6}"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="000000"
-                className="w-full text-center tracking-[1em] text-lg font-bold py-3 bg-white border border-slate-300 rounded-xl text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-              />
+            <div className="flex items-center justify-center gap-2 text-xs text-slate-400 font-medium py-1">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#9B7B5A]" />
+              <span>Waiting for email confirmation...</span>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading || otpCode.length < 6}
-              className="w-full py-3 bg-[#4A3728] hover:bg-[#6B5040] disabled:bg-[#4A3728]/50 text-white font-bold text-sm rounded-full shadow-md transition-all flex items-center justify-center space-x-2"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <span>Verify Code & Log In</span>
-                  <ArrowRight className="w-4 h-4 text-[#C4A882]" />
-                </>
-              )}
-            </button>
-
-            <div className="flex flex-col items-center gap-2 pt-2 border-t border-slate-200/60">
+            <div className="flex flex-col items-center gap-3 pt-3 border-t border-slate-200/60">
               <button
                 type="button"
                 onClick={handleResendOtp}
                 disabled={loading}
-                className="text-xs font-semibold text-[#9B7B5A] hover:underline"
+                className="text-xs font-semibold text-[#9B7B5A] hover:underline disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                Didn't receive the code? Resend Code
+                {loading && <Loader2 className="w-3 h-3 animate-spin" />}
+                Didn't receive the email? Resend Link
               </button>
               <button
                 type="button"
                 onClick={() => { setShowOtpScreen(false); setError(''); }}
-                className="text-xs font-semibold text-slate-500 hover:text-[#4A3728] hover:underline"
+                className="text-xs font-semibold text-slate-500 hover:text-[#4A3728] hover:underline cursor-pointer"
               >
                 ← Back to Login / Sign Up
               </button>
             </div>
-          </form>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
@@ -555,40 +330,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
               </button>
             </div>
 
-            {/* 1-Touch Quick Login — login only */}
-            {mode === 'login' && (
-              <div className="bg-amber-900/5 border border-amber-900/10 p-3 rounded-2xl space-y-2 animate-fade-in">
-                <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                  <span>⚡ 1-Touch Quick Login (Auto-Registering)</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleQuickLogin('client')}
-                    className="py-2 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 text-blue-700 text-[11px] font-bold rounded-xl transition-all cursor-pointer border border-blue-200 text-center"
-                  >
-                    As User
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleQuickLogin('professional')}
-                    className="py-2 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-amber-900 text-[11px] font-bold rounded-xl transition-all cursor-pointer border border-amber-200 text-center"
-                  >
-                    As Expert
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleQuickLogin('admin')}
-                    className="py-2 bg-purple-50 hover:bg-purple-100 disabled:opacity-50 text-purple-700 text-[11px] font-bold rounded-xl transition-all cursor-pointer border border-purple-200 text-center"
-                  >
-                    As Admin
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Role Selector — signup only */}
             {mode === 'signup' && (
@@ -638,13 +379,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
                   </button>
                 </div>
 
-                {/* Admin note */}
-                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mt-1">
-                  <Info className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-[10.5px] text-amber-800 leading-snug">
-                    <strong>Admin access</strong> is not available via signup — it must be manually set in the Supabase database by the developer.
-                  </p>
-                </div>
               </div>
             )}
 

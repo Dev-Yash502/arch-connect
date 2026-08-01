@@ -26,13 +26,15 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { ClientEngineerMatcher } from './ClientEngineerMatcher';
-import { ProjectRequirement, ProfessionalCategory, Professional, Proposal, AuthUser } from '../types';
+import { ProjectRequirement, ProfessionalCategory, Professional, Proposal, AuthUser, ActiveProject, Review, ProjectMilestone } from '../types';
 
 interface ClientPortalProps {
   requirements: ProjectRequirement[];
   professionals: Professional[];
   proposals?: Proposal[];
   currentUser?: AuthUser | null;
+  activeProjects?: ActiveProject[];
+  reviews?: Review[];
   onAddRequirement: (req: ProjectRequirement) => void;
   onOpenCostEstimator: () => void;
   onOpenProposalMatrix: () => void;
@@ -41,6 +43,9 @@ interface ClientPortalProps {
   onSelectProfModal: (prof: Professional) => void;
   onUpdateProposalStatus?: (proposalId: string, status: 'Pending' | 'Accepted' | 'Shortlisted', requirementId?: string) => void;
   onCompleteAndRateProject?: (requirementId: string, professionalId: string, rating: number, feedback: string) => void;
+  onAddReview?: (review: Review) => void;
+  onAddActiveProject?: (project: ActiveProject) => void;
+  onUpdateActiveProject?: (project: ActiveProject) => void;
 }
 
 export const ClientPortal: React.FC<ClientPortalProps> = ({
@@ -55,8 +60,12 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
   onRequestQuote,
   onSelectProfModal,
   onUpdateProposalStatus,
-  onCompleteAndRateProject
+  onCompleteAndRateProject,
+  activeProjects = [],
+  reviews = [],
+  onUpdateActiveProject
 }) => {
+  const [activeTab, setActiveTab] = useState<'requirements' | 'projects'>('requirements');
   const [showPostForm, setShowPostForm] = useState(false);
   const [expandedReqId, setExpandedReqId] = useState<string | null>(null);
 
@@ -168,7 +177,35 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
           </div>
         </div>
 
-        {postedSuccess && (
+        {/* Tab Switcher */}
+        <div className="flex flex-row overflow-x-auto max-w-full sm:w-fit gap-2 bg-slate-200/50 p-1 rounded-2xl no-scrollbar">
+          <button
+            onClick={() => setActiveTab('requirements')}
+            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+              activeTab === 'requirements'
+                ? 'bg-[#4A3728] text-white shadow-md'
+                : 'text-slate-600 hover:text-[#4A3728]'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            My Requirements ({clientReqs.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('projects')}
+            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+              activeTab === 'projects'
+                ? 'bg-[#4A3728] text-white shadow-md'
+                : 'text-slate-600 hover:text-[#4A3728]'
+            }`}
+          >
+            <Building className="w-4 h-4" />
+            Active Projects Tracker ({activeProjects.filter(p => p.clientId === currentUser?.id).length})
+          </button>
+        </div>
+
+        {activeTab === 'requirements' && (
+          <>
+            {postedSuccess && (
           <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl flex items-center space-x-3 animate-fade-in">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
             <span className="text-sm font-bold">
@@ -526,7 +563,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                                               </button>
                                             )}
                                             <a
-                                              href={`https://wa.me/917782869911?text=Hello! I have approved your proposal on Arch-Connect for my project: ${encodeURIComponent(req.title)}. Let's discuss the next steps!`}
+                                              href={`https://wa.me/919286935091?text=Hello! I have approved your proposal on Arch-Connect for my project: ${encodeURIComponent(req.title)}. Let's discuss the next steps!`}
                                               target="_blank"
                                               rel="noopener noreferrer"
                                               onClick={() => markProposalAsChatted(prop.id)}
@@ -615,6 +652,182 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
             </div>
           )}
         </div>
+        </>
+      )}
+
+      {/* Active Projects Tab Content */}
+      {activeTab === 'projects' && (
+        <div className="space-y-6">
+          <div className="border-b border-slate-200 pb-4">
+            <h2 className="font-display font-extrabold text-lg text-[#4A3728]">
+              Active Construction & Design Tracker
+            </h2>
+            <p className="text-xs text-slate-500">
+              Track real-time milestones, release payments, and inspect site progress photos for your matched projects.
+            </p>
+          </div>
+
+          {activeProjects.filter(p => p.clientId === currentUser?.id).length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 p-8 space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-[#FDF8F0] flex items-center justify-center mx-auto text-slate-400">
+                <Building className="w-8 h-8" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-display font-bold text-[#4A3728] text-base">No Active Projects Tracker</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Once you accept a professional's proposal under "My Requirements", a dedicated workspace and milestone tracking panel will be created here.
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveTab('requirements')}
+                className="px-5 py-2.5 bg-[#4A3728] hover:bg-[#6B5040] text-white text-xs font-bold rounded-full transition-colors cursor-pointer"
+              >
+                View My Requirements
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {activeProjects.filter(p => p.clientId === currentUser?.id).map((project) => {
+                const remainingBudget = project.totalBudget - project.amountPaid;
+                
+                return (
+                  <div key={project.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
+                    
+                    {/* Project Header Card */}
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-display font-extrabold text-base text-[#4A3728]">{project.name}</h3>
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200">
+                            Active Progress: {project.overallProgress}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{project.location}</span>
+                          <span className="text-slate-300">|</span>
+                          <span>Completion Target: {project.estimatedCompletion}</span>
+                        </p>
+                      </div>
+                      
+                      {/* Overall Completion Bar */}
+                      <div className="w-full md:w-64 space-y-1">
+                        <div className="flex justify-between text-[10px] font-bold text-slate-600">
+                          <span>Project Completion Status</span>
+                          <span>{project.overallProgress}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-600 rounded-full transition-all duration-500" style={{ width: `${project.overallProgress}%` }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Lead Experts Info Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-[#FDF8F0] p-4 rounded-2xl border border-[#F3EBE1] text-xs font-semibold">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold leading-none mb-1">Architect</span>
+                        <span className="text-slate-800">{project.leadArchitect || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold leading-none mb-1">Civil Engineer</span>
+                        <span className="text-slate-800">{project.leadEngineer || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold leading-none mb-1">Interior Designer</span>
+                        <span className="text-slate-800">{project.interiorDesigner || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold leading-none mb-1">Material Supplier</span>
+                        <span className="text-slate-800">{project.materialSupplier || 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    {/* Budget Tracker & Payment Release */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block leading-none">Total Estimated Budget</span>
+                        <span className="text-xl font-bold text-slate-900">₹{project.totalBudget.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block leading-none">Total Amount Released</span>
+                        <span className="text-xl font-bold text-emerald-700">₹{project.amountPaid.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="space-y-2 border-t md:border-t-0 md:border-l border-slate-200 pt-3 md:pt-0 md:pl-5">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block leading-none">Milestone Payments</span>
+                        <button
+                          onClick={() => {
+                            const amount = prompt("Enter amount to pay / release (₹):", "50000");
+                            if (amount && !isNaN(Number(amount))) {
+                              const newAmount = Math.min(project.totalBudget, project.amountPaid + Number(amount));
+                              onUpdateActiveProject?.({
+                                ...project,
+                                amountPaid: newAmount
+                              });
+                              alert(`Successfully released milestone payment of ₹${Number(amount).toLocaleString('en-IN')}!`);
+                            }
+                          }}
+                          className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <span>💳 Release Payment</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Project Milestones Progress Grid */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Milestones Checklist</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {project.milestones.map((milestone) => (
+                          <div key={milestone.id} className="p-3 bg-white border border-slate-200 rounded-xl flex items-start justify-between gap-3 hover:border-slate-300 transition-colors">
+                            <div className="space-y-1.5 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                                  milestone.status === 'Completed' ? 'bg-emerald-500' : milestone.status === 'In Progress' ? 'bg-amber-500' : 'bg-slate-300'
+                                  }`} />
+                                <span className="text-xs font-bold text-slate-800 truncate">{milestone.title}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-semibold pl-4">
+                                Weight: {milestone.percentageWeight}% | Target: {milestone.targetDate}
+                              </div>
+                            </div>
+                            
+                            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${
+                              milestone.status === 'Completed' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : milestone.status === 'In Progress' ? 'bg-amber-50 text-amber-900 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+                            }`}>
+                              {milestone.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Site Progress Photos Gallery */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Site Inspection Photos</h4>
+                      {project.sitePhotos.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic">No progress photos uploaded by lead engineers yet.</p>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {project.sitePhotos.map((photo, idx) => (
+                            <div key={idx} className="group relative rounded-xl overflow-hidden border border-slate-200 aspect-4/3 bg-slate-100">
+                              <img src={photo.url} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 text-white text-[9.5px] font-medium">
+                                <p className="truncate font-bold">{photo.caption}</p>
+                                <p className="opacity-70 mt-0.5">{photo.date}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
       </div>
 
       {/* ─── RATING & REVIEW MODAL ─── */}

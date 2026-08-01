@@ -39,6 +39,18 @@ export interface Professional {
   phone: string;
   email: string;
   completedProjectsCount: number;
+  owner_id?: string;
+  verificationStatus?: 'unverified' | 'pending' | 'approved' | 'rejected';
+  aadhaarNumber?: string;
+  aadhaarFileName?: string;
+  aadhaarFileUrl?: string;
+  panNumber?: string;
+  panFileName?: string;
+  panFileUrl?: string;
+  licenseType?: string;
+  licenseId?: string;
+  licenseFileName?: string;
+  licenseFileUrl?: string;
 }
 
 export interface ProjectRequirement {
@@ -104,4 +116,16 @@ export interface ActiveProject {
   amountPaid: number;
   milestones: ProjectMilestone[];
   sitePhotos: { url: string; caption: string; date: string }[];
+  clientId?: string;
+  professionalId?: string;
+}
+
+export interface Review {
+  id: string;
+  professionalId: string;
+  clientName: string;
+  rating: number;
+  comment: string;
+  projectTitle: string;
+  createdAt: string;
 }

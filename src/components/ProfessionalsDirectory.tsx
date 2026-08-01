@@ -17,10 +17,15 @@ export const ProfessionalsDirectory: React.FC<ProfessionalsDirectoryProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>(selectedCategoryFilter);
   const [searchQuery, setSearchQuery] = useState('');
-  const [maxPriceFilter, setMaxPriceFilter] = useState<number>(250);
   const [minRatingFilter, setMinRatingFilter] = useState<number>(4.0);
+  const [selectedCity, setSelectedCity] = useState('All');
+  const [selectedExperience, setSelectedExperience] = useState('All');
+  const [selectedPriceRange, setSelectedPriceRange] = useState('All');
 
   const categories = ['All', 'Architect', 'Interior Designer', 'Civil Engineer', 'Material Provider'];
+
+  // Dynamically extract unique cities from professionals list
+  const uniqueCities = ['All', ...Array.from(new Set(professionals.map((p) => p.location).filter(Boolean)))];
 
   const filtered = professionals.filter((p) => {
     const matchesCategory = activeCategory === 'All' || p.role === activeCategory;
@@ -28,10 +33,38 @@ export const ProfessionalsDirectory: React.FC<ProfessionalsDirectoryProps> = ({
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.specialties.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesPrice = p.pricePerSqFt <= maxPriceFilter;
+    
+    // Rating match
     const matchesRating = p.rating >= minRatingFilter;
 
-    return matchesCategory && matchesSearch && matchesPrice && matchesRating;
+    // City match
+    const matchesCity = selectedCity === 'All' || p.location.toLowerCase() === selectedCity.toLowerCase();
+
+    // Experience match
+    let matchesExperience = true;
+    if (selectedExperience === '0-3') {
+      matchesExperience = p.experienceYears >= 0 && p.experienceYears <= 3;
+    } else if (selectedExperience === '3-7') {
+      matchesExperience = p.experienceYears > 3 && p.experienceYears <= 7;
+    } else if (selectedExperience === '7-12') {
+      matchesExperience = p.experienceYears > 7 && p.experienceYears <= 12;
+    } else if (selectedExperience === '12+') {
+      matchesExperience = p.experienceYears > 12;
+    }
+
+    // Price range match
+    let matchesPrice = true;
+    if (selectedPriceRange === 'under-100') {
+      matchesPrice = p.pricePerSqFt < 100;
+    } else if (selectedPriceRange === '100-150') {
+      matchesPrice = p.pricePerSqFt >= 100 && p.pricePerSqFt <= 150;
+    } else if (selectedPriceRange === '150-250') {
+      matchesPrice = p.pricePerSqFt > 150 && p.pricePerSqFt <= 250;
+    } else if (selectedPriceRange === '250+') {
+      matchesPrice = p.pricePerSqFt > 250;
+    }
+
+    return matchesCategory && matchesSearch && matchesRating && matchesCity && matchesExperience && matchesPrice;
   });
 
   return (
@@ -89,50 +122,100 @@ export const ProfessionalsDirectory: React.FC<ProfessionalsDirectoryProps> = ({
           </div>
         )}
 
-        {/* Search & Secondary Filter Bar */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-          {/* Search Field */}
-          <div className="md:col-span-5 relative">
-            <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, location, or style (e.g. Dehradun, Delhi, Villa)..."
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728]"
-            />
-          </div>
-
-          {/* Max Price Slider */}
-          <div className="md:col-span-4 flex items-center space-x-3 px-2">
-            <div className="flex-1">
-              <div className="flex justify-between text-[11px] font-bold text-slate-600 mb-1">
-                <span>Max Fee Rate:</span>
-                <span className="text-[#4A3728] font-extrabold">₹{maxPriceFilter}/sq.ft</span>
-              </div>
+        {/* Search & Advanced Filter Console */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            {/* Search Input */}
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-slate-400" />
               <input
-                type="range"
-                min="50"
-                max="300"
-                step="10"
-                value={maxPriceFilter}
-                onChange={(e) => setMaxPriceFilter(Number(e.target.value))}
-                className="w-full accent-[#4A3728] cursor-pointer"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by professional's name, specialties, or custom designs..."
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-[#4A3728] focus:outline-none focus:ring-2 focus:ring-[#4A3728] font-medium"
               />
             </div>
+            
+            {/* Reset Button */}
+            {(searchQuery || selectedCity !== 'All' || selectedExperience !== 'All' || selectedPriceRange !== 'All' || minRatingFilter !== 4.0) && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCity('All');
+                  setSelectedExperience('All');
+                  setSelectedPriceRange('All');
+                  setMinRatingFilter(4.0);
+                }}
+                className="px-4 py-2 text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 self-stretch sm:self-auto justify-center"
+              >
+                <span>Reset Filters</span>
+              </button>
+            )}
           </div>
 
-          {/* Rating Dropdown */}
-          <div className="md:col-span-3">
-            <select
-              value={minRatingFilter}
-              onChange={(e) => setMinRatingFilter(Number(e.target.value))}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
-            >
-              <option value={4.0}>4.0★ & above</option>
-              <option value={4.5}>4.5★ & above (Top Rated)</option>
-              <option value={4.8}>4.8★ & above (Master Guild)</option>
-            </select>
+          {/* Grid of 4 Filters */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+            {/* Filter 1: City */}
+            <div>
+              <label className="block text-[9.5px] font-bold text-slate-500 uppercase tracking-wider mb-1">Select City / Area</label>
+              <select
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#4A3728] cursor-pointer"
+              >
+                <option value="All">All Cities</option>
+                {uniqueCities.filter(city => city !== 'All').map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter 2: Experience */}
+            <div>
+              <label className="block text-[9.5px] font-bold text-slate-500 uppercase tracking-wider mb-1">Experience Years</label>
+              <select
+                value={selectedExperience}
+                onChange={(e) => setSelectedExperience(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#4A3728] cursor-pointer"
+              >
+                <option value="All">All Experience</option>
+                <option value="0-3">0-3 Years (Budding)</option>
+                <option value="3-7">3-7 Years (Intermediate)</option>
+                <option value="7-12">7-12 Years (Senior)</option>
+                <option value="12+">12+ Years (Master)</option>
+              </select>
+            </div>
+
+            {/* Filter 3: Fee Rate */}
+            <div>
+              <label className="block text-[9.5px] font-bold text-slate-500 uppercase tracking-wider mb-1">Price per sq.ft</label>
+              <select
+                value={selectedPriceRange}
+                onChange={(e) => setSelectedPriceRange(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#4A3728] cursor-pointer"
+              >
+                <option value="All">All Price Ranges</option>
+                <option value="under-100">Under ₹100/sqft</option>
+                <option value="100-150">₹100 - ₹150/sqft</option>
+                <option value="150-250">₹150 - ₹250/sqft</option>
+                <option value="250+">₹250+/sqft</option>
+              </select>
+            </div>
+
+            {/* Filter 4: Rating */}
+            <div>
+              <label className="block text-[9.5px] font-bold text-slate-500 uppercase tracking-wider mb-1">Minimum Rating</label>
+              <select
+                value={minRatingFilter}
+                onChange={(e) => setMinRatingFilter(Number(e.target.value))}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#4A3728] cursor-pointer"
+              >
+                <option value={4.0}>4.0★ & above</option>
+                <option value={4.5}>4.5★ & above</option>
+                <option value={4.8}>4.8★ & above</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -225,10 +308,12 @@ export const ProfessionalsDirectory: React.FC<ProfessionalsDirectoryProps> = ({
               onClick={() => {
                 setActiveCategory('All');
                 setSearchQuery('');
-                setMaxPriceFilter(250);
+                setSelectedCity('All');
+                setSelectedExperience('All');
+                setSelectedPriceRange('All');
                 setMinRatingFilter(4.0);
               }}
-              className="px-5 py-2 bg-[#4A3728] text-white font-bold text-xs rounded-full"
+              className="px-5 py-2 bg-[#4A3728] text-white font-bold text-xs rounded-full hover:bg-[#6B5040] transition-colors cursor-pointer"
             >
               Reset Filters
             </button>

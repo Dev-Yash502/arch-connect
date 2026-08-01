@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   ArrowRight,
@@ -9,6 +9,7 @@ import {
   Home,
   CheckCircle2,
   ChevronRight,
+  ChevronLeft,
   Building2,
   Layers,
   Wrench,
@@ -19,12 +20,6 @@ interface LandingPageProps {
   onOpenAuth: (mode?: 'login' | 'signup') => void;
 }
 
-const STATS = [
-  { value: '1,200+', label: 'Verified Professionals' },
-  { value: '3,800+', label: 'Projects Completed' },
-  { value: '4.9★', label: 'Average Rating' },
-  { value: '₹0', label: 'Platform Fee' },
-];
 
 const FEATURES = [
   {
@@ -57,32 +52,111 @@ const CATEGORIES = [
 const TESTIMONIALS = [
   {
     name: 'Rahul Sharma',
-    location: 'Dehradun',
-    role: 'User',
+    role: 'Homeowner',
     avatar: 'RS',
-    text: 'Found the perfect architect for my villa in under 10 minutes. The matching engine is brilliant.',
+    text: 'Was struggling to find a reliable architect for my duplex. Local contractors were giving vague estimates. Found an architect through Arch-Connect, and the upfront transparent pricing saved me a lot of headache.',
     rating: 5,
   },
   {
     name: 'Ar. Priya Nair',
-    location: 'Delhi NCR',
     role: 'Architect',
     avatar: 'PN',
-    text: 'My portfolio reach tripled. Quality client inquiries come directly — zero spam.',
+    text: 'I was skeptical about online lead generation because of spam. But here, clients have verified requirements before they can contact us. It has helped my studio sign three premium design contracts this quarter.',
     rating: 5,
   },
   {
     name: 'Er. Vikram Singh',
-    location: 'Roorkee',
     role: 'Civil Engineer',
     avatar: 'VS',
-    text: 'Arch-Connect gave me 4 serious projects in my first month. Best platform for engineers.',
+    text: 'The payment transparency is what convinced me. I finished 2 residential structural planning projects last month, and clients paid on time as agreed in the contract template provided.',
+    rating: 4,
+  },
+  {
+    name: 'Neha Patel',
+    role: 'Homeowner',
+    avatar: 'NP',
+    text: 'Renovating a 3BHK flat is stressful. We got matched with an interior designer who actually listened to our space-saving needs. The background-verification process gave us complete peace of mind.',
     rating: 5,
+  },
+  {
+    name: 'Rajesh Iyer',
+    role: 'Homeowner',
+    avatar: 'RI',
+    text: 'Had a hard time finding a structural engineer who understood pile foundations for our coastal property. Found a qualified professional on here within 2 days. The response time was incredibly fast.',
+    rating: 5,
+  },
+  {
+    name: 'Ar. Amit Verma',
+    role: 'Architect',
+    avatar: 'AV',
+    text: "Getting verified takes a couple of days because they check your COA registration, but that's a good thing. It filters out uncertified designers. Highly recommend for serious professionals.",
+    rating: 4,
+  },
+  {
+    name: 'Meera Deshmukh',
+    role: 'Homeowner',
+    avatar: 'MD',
+    text: 'Sourced vitrified tiles and premium plywood directly from verified material vendors for our clinic setup. Saved about 12% compared to local retail quotes. The direct chat feature is very convenient.',
+    rating: 4,
+  },
+  {
+    name: 'Er. Kunal Sen',
+    role: 'Civil Engineer',
+    avatar: 'KS',
+    text: 'Unlike other platforms that charge huge commissions, Arch-Connect keeps it very fair. Most clients come with clear architectural drawings, which makes my job as a structural consultant much easier.',
+    rating: 5,
+  },
+  {
+    name: 'Pooja Gupta',
+    role: 'Interior Designer',
+    avatar: 'PG',
+    text: 'I just started my independent practice. Getting high-ticket clients was tough without a big office. Presenting my portfolio on this clean layout helped build trust. Got 4 bookings in 2 months!',
+    rating: 5,
+  },
+  {
+    name: 'Ankit Mehta',
+    role: 'Homeowner',
+    avatar: 'AM',
+    text: 'Used it to hire a civil engineer and site supervisor for our farmhouse construction. Great interface, though I wish there was a filter for specific experience levels. Overall, very satisfied with the team we found.',
+    rating: 4,
   },
 ];
 
+
 export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [visibleCards, setVisibleCards] = useState(3);
+
+  useEffect(() => {
+    const handleResize = () => {
+      let cards = 3;
+      if (window.innerWidth < 640) {
+        cards = 1;
+      } else if (window.innerWidth < 1024) {
+        cards = 2;
+      }
+      setVisibleCards(cards);
+      setCurrentIndex((prev) => Math.min(prev, TESTIMONIALS.length - cards));
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const nextSlide = () => {
+    setCurrentIndex((prev) => {
+      const maxIndex = TESTIMONIALS.length - visibleCards;
+      return prev >= maxIndex ? 0 : prev + 1;
+    });
+  };
+
+  const prevSlide = () => {
+    setCurrentIndex((prev) => {
+      const maxIndex = TESTIMONIALS.length - visibleCards;
+      return prev <= 0 ? maxIndex : prev - 1;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#FDF8F0] font-sans antialiased overflow-x-hidden">
@@ -168,39 +242,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
             </button>
           </div>
 
-          {/* Social proof */}
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <div className="flex -space-x-2.5">
-              {['AV', 'RK', 'VM'].map((initials, i) => (
-                <div
-                  key={i}
-                  className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4A3728] to-[#9B7B5A] border-2 border-white flex items-center justify-center text-[9px] font-bold text-white"
-                >
-                  {initials}
-                </div>
-              ))}
-              <div className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[9px] font-bold text-[#4A3728]">
-                +1k
-              </div>
-            </div>
-            <p className="text-sm text-slate-600">
-              <strong className="text-[#4A3728]">Trusted by 1,200+</strong> homeowners across India
-            </p>
-          </div>
         </div>
       </section>
 
-      {/* ── STATS BAR ── */}
-      <section className="bg-[#4A3728] py-8">
-        <div className="max-w-5xl mx-auto px-4 sm:px-8 grid grid-cols-2 sm:grid-cols-4 gap-6">
-          {STATS.map((s, i) => (
-            <div key={i} className="text-center">
-              <div className="font-display font-extrabold text-2xl sm:text-3xl text-[#C4A882]">{s.value}</div>
-              <div className="text-xs text-amber-200/70 font-medium mt-0.5">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* ── CATEGORIES ── */}
       <section className="py-16 px-4 sm:px-8">
@@ -255,33 +299,84 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
       </section>
 
       {/* ── TESTIMONIALS ── */}
-      <section className="py-16 px-4 sm:px-8 bg-[#4A3728]">
+      <section className="py-16 px-4 sm:px-8 bg-[#4A3728] relative overflow-hidden">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="font-display font-extrabold text-3xl text-white">What People Say</h2>
             <p className="text-amber-200/60 mt-2 text-sm">Real clients and professionals, real results</p>
           </div>
-          <div className="grid sm:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((t, i) => (
-              <div key={i} className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-5 space-y-3">
-                <div className="flex gap-1">
-                  {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-amber-100/90 leading-relaxed italic">"{t.text}"</p>
-                <div className="flex items-center gap-2.5 pt-1">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C4A882] to-[#9B7B5A] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-                    {t.avatar}
+
+          {/* Carousel Wrapper */}
+          <div className="relative px-4 sm:px-12">
+            {/* Left Arrow Button */}
+            <button
+              onClick={prevSlide}
+              aria-label="Previous testimonials"
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center transition-all cursor-pointer shadow-md hover:scale-105"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            {/* Viewport */}
+            <div className="overflow-hidden -mx-2.5">
+              <div
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{
+                  transform: `translateX(-${currentIndex * (100 / visibleCards)}%)`,
+                }}
+              >
+                {TESTIMONIALS.map((t, i) => (
+                  <div
+                    key={i}
+                    className="w-full sm:w-1/2 lg:w-1/3 flex-shrink-0 px-2.5"
+                  >
+                    <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-5 space-y-3 h-full flex flex-col justify-between">
+                      <div className="space-y-3">
+                        <div className="flex gap-1">
+                          {Array.from({ length: t.rating }).map((_, j) => (
+                            <Star key={j} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                          ))}
+                        </div>
+                        <p className="text-sm text-amber-100/90 leading-relaxed italic">"{t.text}"</p>
+                      </div>
+                      <div className="flex items-center gap-2.5 pt-3 border-t border-white/5 mt-auto">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C4A882] to-[#9B7B5A] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                          {t.avatar}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white">{t.name}</p>
+                          <p className="text-[10px] text-amber-200/50 font-medium">
+                            {t.role}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-white">{t.name}</p>
-                    <p className="text-[10px] text-amber-200/50 flex items-center gap-0.5">
-                      <MapPin className="w-2.5 h-2.5" /> {t.location} · {t.role}
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
+            </div>
+
+            {/* Right Arrow Button */}
+            <button
+              onClick={nextSlide}
+              aria-label="Next testimonials"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center transition-all cursor-pointer shadow-md hover:scale-105"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Dots Indicator */}
+          <div className="flex justify-center flex-wrap gap-1.5 mt-8">
+            {Array.from({ length: TESTIMONIALS.length - visibleCards + 1 }).map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentIndex(idx)}
+                aria-label={`Go to slide ${idx + 1}`}
+                className={`w-2 h-2 rounded-full transition-all cursor-pointer ${
+                  currentIndex === idx ? 'bg-amber-400 w-4' : 'bg-white/20 hover:bg-white/40'
+                }`}
+              />
             ))}
           </div>
         </div>

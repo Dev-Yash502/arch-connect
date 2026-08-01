@@ -16,7 +16,7 @@ import { ClientPortal } from './components/ClientPortal';
 import { LandingPage } from './components/LandingPage';
 import { AdminPanel } from './components/AdminPanel';
 
-import { Professional, CostEstimateInput, ProjectRequirement, AuthUser, Proposal } from './types';
+import { Professional, CostEstimateInput, ProjectRequirement, AuthUser, Proposal, ActiveProject, Review } from './types';
 
 import {
   Compass,
@@ -159,46 +159,50 @@ export default function App() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       try {
         if (session?.user) {
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('name, role, joined_at')
-            .eq('id', session.user.id)
-            .single();
-          if (profile) {
-            let avatar = undefined;
-            if (profile.role === 'professional') {
-              const { data: prof } = await supabase
-                .from('professionals')
-                .select('avatar')
-                .eq('owner_id', session.user.id)
-                .maybeSingle();
-              if (prof?.avatar) {
-                avatar = prof.avatar;
+          let name = session.user.user_metadata?.name || 'User';
+          let role = session.user.user_metadata?.role || 'client';
+          let avatar = undefined;
+          let joinedAt = session.user.created_at;
+
+          try {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('name, role, joined_at')
+              .eq('id', session.user.id)
+              .single();
+            if (profile) {
+              name = profile.name;
+              role = profile.role;
+              joinedAt = profile.joined_at;
+
+              if (role === 'professional') {
+                const { data: prof } = await supabase
+                  .from('professionals')
+                  .select('avatar')
+                  .eq('owner_id', session.user.id)
+                  .maybeSingle();
+                if (prof?.avatar) {
+                  avatar = prof.avatar;
+                }
               }
             }
-
-            const authUser = {
-              id: session.user.id,
-              name: profile.name,
-              email: session.user.email!,
-              role: profile.role,
-              joinedAt: profile.joined_at,
-              avatar: avatar,
-            };
-            setCurrentUser(authUser);
-            localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
-          } else {
-            setCurrentUser(null);
-            localStorage.removeItem('archconnect_user_session');
+          } catch (profileErr) {
+            console.warn("Could not load user profile, falling back to metadata:", profileErr);
           }
-        } else {
-          setCurrentUser(null);
-          localStorage.removeItem('archconnect_user_session');
+
+          const authUser = {
+            id: session.user.id,
+            name,
+            email: session.user.email!,
+            role,
+            joinedAt,
+            avatar,
+          };
+          setCurrentUser(authUser);
+          localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
         }
       } catch (err) {
         console.error("Session restore error:", err);
-        setCurrentUser(null);
-        localStorage.removeItem('archconnect_user_session');
       } finally {
         setAuthLoading(false);
       }
@@ -210,40 +214,53 @@ export default function App() {
     // Listen for future login/logout events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
-        if (event === 'SIGNED_OUT' || !session) {
+        if (event === 'SIGNED_OUT') {
           setCurrentUser(null);
           localStorage.removeItem('archconnect_user_session');
+          localStorage.removeItem('admin_session');
           setActiveTab('home');
         } else if (session?.user) {
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('name, role, joined_at')
-            .eq('id', session.user.id)
-            .single();
-          if (profile) {
-            let avatar = undefined;
-            if (profile.role === 'professional') {
-              const { data: prof } = await supabase
-                .from('professionals')
-                .select('avatar')
-                .eq('owner_id', session.user.id)
-                .maybeSingle();
-              if (prof?.avatar) {
-                avatar = prof.avatar;
+          let name = session.user.user_metadata?.name || 'User';
+          let role = session.user.user_metadata?.role || 'client';
+          let avatar = undefined;
+          let joinedAt = session.user.created_at;
+
+          try {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('name, role, joined_at')
+              .eq('id', session.user.id)
+              .single();
+            if (profile) {
+              name = profile.name;
+              role = profile.role;
+              joinedAt = profile.joined_at;
+
+              if (role === 'professional') {
+                const { data: prof } = await supabase
+                  .from('professionals')
+                  .select('avatar')
+                  .eq('owner_id', session.user.id)
+                  .maybeSingle();
+                if (prof?.avatar) {
+                  avatar = prof.avatar;
+                }
               }
             }
-
-            const authUser = {
-              id: session.user.id,
-              name: profile.name,
-              email: session.user.email!,
-              role: profile.role,
-              joinedAt: profile.joined_at,
-              avatar: avatar,
-            };
-            setCurrentUser(authUser);
-            localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
+          } catch (profileErr) {
+            console.warn("Could not load user profile on state change, falling back to metadata:", profileErr);
           }
+
+          const authUser = {
+            id: session.user.id,
+            name,
+            email: session.user.email!,
+            role,
+            joinedAt,
+            avatar,
+          };
+          setCurrentUser(authUser);
+          localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
         }
       } catch (err) {
         console.error("Auth state change processing error:", err);
@@ -259,6 +276,78 @@ export default function App() {
   // Fetch professionals from Supabase (falls back to mock data for seeding)
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [profsLoaded, setProfsLoaded] = useState(false);
+
+  const [activeProjects, setActiveProjects] = useState<ActiveProject[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+
+  const fetchActiveProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('active_projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        const mapped: ActiveProject[] = data.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          clientName: r.client_name,
+          location: r.location,
+          overallProgress: Number(r.overall_progress || 0),
+          leadArchitect: r.lead_architect || '',
+          leadEngineer: r.lead_engineer || '',
+          interiorDesigner: r.interior_designer || '',
+          materialSupplier: r.material_supplier || '',
+          estimatedCompletion: r.estimated_completion || '',
+          totalBudget: Number(r.total_budget || 0),
+          amountPaid: Number(r.amount_paid || 0),
+          milestones: r.milestones || [],
+          sitePhotos: r.site_photos || [],
+          clientId: r.client_id,
+          professionalId: r.professional_id
+        }));
+        setActiveProjects(mapped);
+      }
+    } catch (e) {
+      console.warn("Could not fetch active projects from database, using localStorage fallback:", e);
+      const cached = localStorage.getItem('archconnect_active_projects');
+      if (cached) {
+        try { setActiveProjects(JSON.parse(cached)); } catch (_) {}
+      }
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        const mapped: Review[] = data.map((r: any) => ({
+          id: r.id,
+          professionalId: r.professional_id,
+          clientName: r.client_name,
+          rating: Number(r.rating || 5),
+          comment: r.comment || '',
+          projectTitle: r.project_title || '',
+          createdAt: r.created_at
+        }));
+        setReviews(mapped);
+      }
+    } catch (e) {
+      console.warn("Could not fetch reviews from database, using localStorage fallback:", e);
+      const cached = localStorage.getItem('archconnect_reviews');
+      if (cached) {
+        try { setReviews(JSON.parse(cached)); } catch (_) {}
+      }
+    }
+  };
 
   const fetchProfessionals = async () => {
     const { data, error } = await supabase
@@ -291,6 +380,18 @@ export default function App() {
         phone: r.phone,
         email: r.email,
         completedProjectsCount: Number(r.completed_projects_count || 0),
+        owner_id: r.owner_id,
+        verificationStatus: r.verification_status || 'unverified',
+        aadhaarNumber: r.aadhaar_number,
+        aadhaarFileName: r.aadhaar_file_name,
+        aadhaarFileUrl: r.aadhaar_file_url,
+        panNumber: r.pan_number,
+        panFileName: r.pan_file_name,
+        panFileUrl: r.pan_file_url,
+        licenseType: r.license_type,
+        licenseId: r.license_id,
+        licenseFileName: r.license_file_name,
+        licenseFileUrl: r.license_file_url,
       }));
       setProfessionals(mapped);
     }
@@ -305,6 +406,8 @@ export default function App() {
         .delete()
         .or('name.ilike.%Vikram%,name.ilike.%Rohan%,name.ilike.%Apex%');
       await fetchProfessionals();
+      await fetchActiveProjects();
+      await fetchReviews();
     };
     runCleanupAndFetch();
   }, []);
@@ -410,6 +513,107 @@ export default function App() {
         setRequirements(prev => prev.map(r => r.id === targetReqId ? { ...r, status: 'Matched' } : r));
         await supabase.from('requirements').update({ status: 'Matched' }).eq('id', targetReqId);
       }
+
+      // Auto-create Active Project
+      const proposal = proposals.find(p => p.id === proposalId);
+      const req = requirements.find(r => r.id === (targetReqId || proposal?.requirementId));
+      if (proposal && req) {
+        const newProject: ActiveProject = {
+          id: `proj-${Date.now()}`,
+          name: `${req.category} - ${req.title}`,
+          clientName: currentUser?.name || 'Client Name',
+          location: req.location,
+          overallProgress: 0,
+          leadArchitect: proposal.professionalRole === 'Architect' ? proposal.professionalName : '',
+          leadEngineer: proposal.professionalRole === 'Civil Engineer' ? proposal.professionalName : '',
+          interiorDesigner: proposal.professionalRole === 'Interior Designer' ? proposal.professionalName : '',
+          materialSupplier: proposal.professionalRole === 'Material Provider' ? proposal.professionalName : '',
+          estimatedCompletion: `${proposal.timelineEstimateMonths} Months`,
+          totalBudget: proposal.priceEstimateTotal,
+          amountPaid: 0,
+          clientId: currentUser?.id,
+          professionalId: proposal.professionalId,
+          milestones: [
+            { id: 'm1', title: 'Site Analysis & Scope Alignment', percentageWeight: 10, status: 'In Progress', targetDate: '2 Weeks' },
+            { id: 'm2', title: 'Concept Architectural Layout', percentageWeight: 20, status: 'Upcoming', targetDate: '1 Month' },
+            { id: 'm3', title: 'Structural Blueprint & Engineering Details', percentageWeight: 20, status: 'Upcoming', targetDate: '2 Months' },
+            { id: 'm4', title: 'Foundation & Core Civil Construction', percentageWeight: 25, status: 'Upcoming', targetDate: '4 Months' },
+            { id: 'm5', title: 'Interior Fit-outs & Electrical Works', percentageWeight: 15, status: 'Upcoming', targetDate: '5 Months' },
+            { id: 'm6', title: 'Final Handover & Snagging List', percentageWeight: 10, status: 'Upcoming', targetDate: '6 Months' }
+          ],
+          sitePhotos: []
+        };
+
+        // Update state
+        setActiveProjects(prev => [newProject, ...prev]);
+
+        // DB save
+        try {
+          await supabase.from('active_projects').insert({
+            id: newProject.id,
+            name: newProject.name,
+            client_name: newProject.clientName,
+            location: newProject.location,
+            overall_progress: newProject.overallProgress,
+            lead_architect: newProject.leadArchitect,
+            lead_engineer: newProject.leadEngineer,
+            interior_designer: newProject.interiorDesigner,
+            material_supplier: newProject.materialSupplier,
+            estimated_completion: newProject.estimatedCompletion,
+            total_budget: newProject.totalBudget,
+            amount_paid: newProject.amountPaid,
+            milestones: newProject.milestones,
+            site_photos: newProject.sitePhotos,
+            client_id: newProject.clientId,
+            professional_id: newProject.professionalId
+          });
+        } catch (err) {
+          console.warn("Could not insert active project to DB:", err);
+        }
+
+        // LocalStorage save
+        const cached = localStorage.getItem('archconnect_active_projects');
+        const list = cached ? JSON.parse(cached) : [];
+        localStorage.setItem('archconnect_active_projects', JSON.stringify([newProject, ...list]));
+      }
+    }
+  };
+
+  const handleUpdateActiveProject = async (updatedProject: ActiveProject) => {
+    setActiveProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+    
+    // DB save
+    try {
+      await supabase
+        .from('active_projects')
+        .update({
+          name: updatedProject.name,
+          client_name: updatedProject.clientName,
+          location: updatedProject.location,
+          overall_progress: updatedProject.overallProgress,
+          lead_architect: updatedProject.leadArchitect,
+          lead_engineer: updatedProject.leadEngineer,
+          interior_designer: updatedProject.interiorDesigner,
+          material_supplier: updatedProject.materialSupplier,
+          estimated_completion: updatedProject.estimatedCompletion,
+          total_budget: updatedProject.totalBudget,
+          amount_paid: updatedProject.amountPaid,
+          milestones: updatedProject.milestones,
+          site_photos: updatedProject.sitePhotos,
+        })
+        .eq('id', updatedProject.id);
+    } catch (e) {
+      console.warn("Could not update active project in DB:", e);
+    }
+
+    // LocalStorage save
+    const cached = localStorage.getItem('archconnect_active_projects');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        const updatedList = parsed.map((p: any) => p.id === updatedProject.id ? updatedProject : p);
+        localStorage.setItem('archconnect_active_projects', JSON.stringify(updatedList));
+      } catch (_) {}
     }
   };
 
@@ -424,6 +628,41 @@ export default function App() {
       .select('rating, review_count, completed_projects_count')
       .eq('id', professionalId)
       .single();
+
+    const req = requirements.find(r => r.id === requirementId);
+
+    // Create written Review object
+    const newReview: Review = {
+      id: `rev-${Date.now()}`,
+      professionalId,
+      clientName: currentUser?.name || 'Verified Client',
+      rating,
+      comment: feedback || 'Outstanding craftsmanship and seamless coordination!',
+      projectTitle: req ? req.title : 'Design Build Project',
+      createdAt: new Date().toISOString()
+    };
+
+    setReviews(prev => [newReview, ...prev]);
+
+    // DB save review
+    try {
+      await supabase.from('reviews').insert({
+        id: newReview.id,
+        professional_id: newReview.professionalId,
+        client_name: newReview.clientName,
+        rating: newReview.rating,
+        comment: newReview.comment,
+        project_title: newReview.projectTitle,
+        created_at: newReview.createdAt
+      });
+    } catch (err) {
+      console.warn("Could not insert review to DB:", err);
+    }
+
+    // LocalStorage save review
+    const cachedReviews = localStorage.getItem('archconnect_reviews');
+    const reviewsList = cachedReviews ? JSON.parse(cachedReviews) : [];
+    localStorage.setItem('archconnect_reviews', JSON.stringify([newReview, ...reviewsList]));
 
     if (!fetchError && profData) {
       const currentRating = Number(profData.rating || 4.5);
@@ -552,6 +791,17 @@ export default function App() {
       email: updatedProf.email,
       completed_projects_count: updatedProf.completedProjectsCount,
       owner_id: currentUser?.id ?? null,
+      verification_status: updatedProf.verificationStatus || 'unverified',
+      aadhaar_number: updatedProf.aadhaarNumber || null,
+      aadhaar_file_name: updatedProf.aadhaarFileName || null,
+      aadhaar_file_url: updatedProf.aadhaarFileUrl || null,
+      pan_number: updatedProf.panNumber || null,
+      pan_file_name: updatedProf.panFileName || null,
+      pan_file_url: updatedProf.panFileUrl || null,
+      license_type: updatedProf.licenseType || null,
+      license_id: updatedProf.licenseId || null,
+      license_file_name: updatedProf.licenseFileName || null,
+      license_file_url: updatedProf.licenseFileUrl || null,
     };
     
     // Perform parallel database upserts
@@ -606,6 +856,12 @@ export default function App() {
   const [isProposalMatrixOpen, setIsProposalMatrixOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+
+  useEffect(() => {
+    if (currentUser) {
+      setIsAuthOpen(false);
+    }
+  }, [currentUser]);
 
   const openAuth = (mode: 'login' | 'signup' = 'login') => {
     setAuthModalMode(mode);
@@ -1003,6 +1259,9 @@ export default function App() {
               onAddProposal={handleAddProposal}
               currentUser={currentUser}
               profsLoaded={profsLoaded}
+              activeProjects={activeProjects}
+              reviews={reviews}
+              onUpdateActiveProject={handleUpdateActiveProject}
             />
           ) : (
             <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center px-4">
@@ -1033,6 +1292,9 @@ export default function App() {
               onSelectProfModal={(prof) => setSelectedProfForModal(prof)}
               onUpdateProposalStatus={handleUpdateProposalStatus}
               onCompleteAndRateProject={handleCompleteAndRateProject}
+              activeProjects={activeProjects}
+              reviews={reviews}
+              onUpdateActiveProject={handleUpdateActiveProject}
             />
           ) : (
             <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center px-4">
@@ -1104,33 +1366,7 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Social Proof Avatars Stack */}
-              <div className="pt-5 sm:pt-6 flex flex-wrap items-center justify-center lg:justify-start gap-3 border-t border-slate-200/80">
-                <div className="flex -space-x-3">
-                  <img
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-white object-cover shadow-xs"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCS53da19ANzI9gGTjR_s8eShbFTJw0FnQ-v1JiJrk_Tbxs6A4ZbW_cCa2yZzjeq2AfWuR11c0mSC1yEKGboNmKEF3QwEE8qjSze9hsXLTbU-9t-eubUbGIl78F5OZhQKFbSO82Zx63Bro6AEdSAL8G3i81ZQ-hDeBN2dYmjwc-lp1Y9Tmh6s2TI7ISz42tK_zQG7NERqLTmT6MHnagyBxCxSFKtWUfTrHZGZnl0277NNaYAu5JEKM"
-                    alt="Architect Avatar"
-                  />
-                  <img
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-white object-cover shadow-xs"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTPrdAS0On6oT1Nd1rJi3fMOBGTdH5PV2R5zCjq-WrC_tp0etHkT8xkJQmFLZXrryYDHKor4rqXkma_G76-NGifVfWoelWaO7nUQaNv9JL7FPtOiDDB3w_6-wrt_DVDNXN8ybLhAz08rzPS2ASeEwmeGoHPTTqF1f-zlPOo18wueyTIF97PqCL9zXPeDFctaxTUWHZdIkZzaL1zGMMK24AzOy2ITLHYYUaOxyuYcaPtaJUEH22uC0"
-                    alt="Interior Designer Avatar"
-                  />
-                  <img
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-white object-cover shadow-xs"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCI3bGY4Y_Hhv8bdTjN0koXT-LVa0C5mb4kKoZ6954epVRXTZRVLAtuE3ti18XLzWGzEcBHr5864HgYhfOPUdN2-E41SIg7HvWXhJpPyIomc7l-TCms_TIAyI3EDqrqV0i4QVkcBXnKs7A9a1Lk79703rinW218Ar84VwSxOflJwaKgwsicKGApKvHF5FdqbOjfAZz4s1fVBJNK-7KLe9K1jEcZn3SjEFGAxC41C0vf-6c_3cZ-5pk"
-                    alt="Civil Engineer Avatar"
-                  />
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-xs font-bold text-[#4A3728]">
-                    +1k
-                  </div>
-                </div>
 
-                <div className="text-xs sm:text-sm text-slate-600">
-                  <strong className="font-bold text-[#4A3728]">Trusted by</strong> thousands of homeowners
-                </div>
-              </div>
             </div>
 
             {/* Hero Right: Big Logo Image */}
@@ -1220,6 +1456,7 @@ export default function App() {
         onRequestQuote={(prof) => {
           setIsPostReqOpen(true);
         }}
+        reviews={reviews}
       />
 
       <AuthModal

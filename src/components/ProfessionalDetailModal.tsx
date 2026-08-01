@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { X, Star, MapPin, Award, CheckCircle2, Phone, Mail, Building, Briefcase, Calendar, MessageSquare, ShieldCheck } from 'lucide-react';
-import { Professional } from '../types';
+import { Professional, Review } from '../types';
 
 interface ProfessionalDetailModalProps {
   isOpen: boolean;
   professional: Professional | null;
   onClose: () => void;
   onRequestQuote: (prof: Professional) => void;
+  reviews?: Review[];
 }
 
 export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = ({
   isOpen,
   professional,
   onClose,
-  onRequestQuote
+  onRequestQuote,
+  reviews = []
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'portfolio'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'reviews'>('overview');
 
   if (!isOpen || !professional) return null;
 
@@ -95,6 +97,16 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
           >
             Project Portfolio ({professional.portfolio.length})
           </button>
+          <button
+            onClick={() => setActiveTab('reviews')}
+            className={`py-3.5 px-4 font-bold text-sm border-b-2 transition-colors ${
+              activeTab === 'reviews'
+                ? 'border-[#4A3728] text-[#4A3728]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Client Reviews ({reviews.filter(r => r.professionalId === professional.id).length})
+          </button>
         </div>
 
         {/* Content Body */}
@@ -147,7 +159,7 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
                 </div>
               </div>
             </>
-          ) : (
+          ) : activeTab === 'portfolio' ? (
             /* Portfolio Showcase */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {professional.portfolio.map((item) => (
@@ -168,6 +180,38 @@ export const ProfessionalDetailModal: React.FC<ProfessionalDetailModalProps> = (
                   </div>
                 </div>
               ))}
+            </div>
+          ) : (
+            /* Client Reviews Showcase */
+            <div className="space-y-4">
+              {reviews.filter(r => r.professionalId === professional.id).length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-2xl border border-slate-200 p-6">
+                  <p className="text-xs font-semibold text-slate-500">No written reviews submitted yet for this professional.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reviews.filter(r => r.professionalId === professional.id).map((rev) => (
+                    <div key={rev.id} className="bg-white p-5 rounded-2xl border border-slate-200 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-display font-bold text-sm text-[#4A3728]">{rev.clientName}</h4>
+                          <span className="text-[10px] text-slate-400 font-semibold">{rev.projectTitle}</span>
+                        </div>
+                        <div className="flex items-center space-x-1 px-2.5 py-1 bg-amber-50 text-amber-900 border border-amber-200 rounded-full text-xs font-bold">
+                          <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                          <span>{rev.rating}</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-700 font-medium italic">
+                        "{rev.comment}"
+                      </p>
+                      <span className="text-[9.5px] text-slate-400 font-semibold block text-right">
+                        {new Date(rev.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

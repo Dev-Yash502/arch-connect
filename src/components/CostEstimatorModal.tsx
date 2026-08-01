@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { X, Calculator, Check, ArrowRight, Building, Sparkles } from 'lucide-react';
 import { CostEstimateInput } from '../types';
 
@@ -24,31 +24,45 @@ export const CostEstimatorModal: React.FC<CostEstimatorModalProps> = ({
   if (!isOpen) return null;
 
   // Base rate per sq ft calculation matrix (in INR)
-  const getBaseRate = () => {
-    let base = 2200; // Base ₹ per sq ft
-    if (inputs.category === 'Architectural Blueprint') base = 120;
-    if (inputs.category === 'Turnkey Interior') base = 1200;
-    if (inputs.category === 'Civil Construction') base = 1450;
-    if (inputs.category === 'Material Package') base = 850;
-    if (inputs.category === 'Complete Villa') base = 2200;
+  const getDetailedEstimate = () => {
+    let baseRate = 2200; // default base ₹ per sq ft
+    
+    // City-wise base rates adjustments (material packages & logistics cost variance)
+    let cityModifier = 1.0;
+    if (inputs.locationTier === 'Delhi NCR') {
+      cityModifier = 1.25;
+    } else if (inputs.locationTier === 'Dehradun') {
+      cityModifier = 1.12;
+    } else if (inputs.locationTier === 'Roorkee') {
+      cityModifier = 0.98;
+    }
 
-    // Quality multiplier
-    let qualityMult = 1.0;
-    if (inputs.qualityLevel === 'Premium') qualityMult = 1.4;
-    if (inputs.qualityLevel === 'Luxury') qualityMult = 2.0;
+    // Category base rates
+    if (inputs.category === 'Architectural Blueprint') baseRate = 120;
+    else if (inputs.category === 'Turnkey Interior') baseRate = 1350;
+    else if (inputs.category === 'Civil Construction') baseRate = 1650;
+    else if (inputs.category === 'Material Package') baseRate = 950;
+    else if (inputs.category === 'Complete Villa') baseRate = 2400;
 
-    // Location multiplier
-    let locationMult = 1.0; // Roorkee
-    if (inputs.locationTier === 'Delhi NCR') locationMult = 1.25;
-    if (inputs.locationTier === 'Dehradun') locationMult = 1.1;
+    // Quality level additions (Premium materials, high-density wood, imported glaze)
+    let qualityMultiplier = 1.0;
+    if (inputs.qualityLevel === 'Premium') qualityMultiplier = 1.35;
+    else if (inputs.qualityLevel === 'Luxury') qualityMultiplier = 1.85;
 
-    // Floor multiplier
-    let floorMult = 1.0 + (inputs.numberOfFloors - 1) * 0.08;
+    // Floor parameters: cumulative column/beam load complexity
+    let floorComplexityMultiplier = 1.0 + (inputs.numberOfFloors - 1) * 0.09;
 
-    return Math.round(base * qualityMult * locationMult * floorMult);
+    // Contractor supervision overhead profit (12%)
+    const rawRate = Math.round(baseRate * cityModifier * qualityMultiplier * floorComplexityMultiplier);
+    const contractorCharges = Math.round(rawRate * 0.12);
+    
+    return {
+      ratePerSqFt: rawRate + contractorCharges,
+      contractorFee: contractorCharges
+    };
   };
 
-  const ratePerSqFt = getBaseRate();
+  const { ratePerSqFt, contractorFee } = getDetailedEstimate();
   const totalCost = ratePerSqFt * inputs.areaSqFt;
 
   // Breakdown percentages
@@ -56,6 +70,134 @@ export const CostEstimatorModal: React.FC<CostEstimatorModalProps> = ({
   const civilCost = Math.round(totalCost * 0.48);
   const interiorCost = Math.round(totalCost * 0.24);
   const materialsCost = Math.round(totalCost * 0.18);
+
+  const downloadBreakdownPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Please allow popups to download the PDF.");
+      return;
+    }
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Arch-Connect Cost Breakdown & Estimate Report</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #2C1F14; line-height: 1.6; }
+            .header { border-bottom: 2px solid #4A3728; padding-bottom: 20px; margin-bottom: 30px; }
+            .logo { font-size: 24px; font-weight: bold; color: #4A3728; }
+            .subtitle { font-size: 14px; color: #777; margin-top: 5px; }
+            .section { margin-bottom: 30px; }
+            .section-title { font-size: 16px; font-weight: bold; text-transform: uppercase; color: #4A3728; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 15px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .card { background: #FDF8F0; padding: 15px; border-radius: 8px; border: 1px solid #F3EBE1; }
+            .card-title { font-size: 12px; text-transform: uppercase; color: #777; font-weight: bold; }
+            .card-value { font-size: 18px; font-weight: bold; color: #4A3728; margin-top: 5px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th { text-align: left; background: #4A3728; color: white; padding: 10px; font-size: 12px; text-transform: uppercase; }
+            td { padding: 12px 10px; border-bottom: 1px solid #eee; font-size: 13px; }
+            .total-row { font-weight: bold; background: #FDF8F0; }
+            .footer { margin-top: 50px; font-size: 11px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">ARCH-CONNECT</div>
+            <div class="subtitle">Premium Architecture & Construction Estimator Report</div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">Project Specifications</div>
+            <div class="grid">
+              <div class="card">
+                <div class="card-title">Scope Category</div>
+                <div class="card-value">${inputs.category}</div>
+              </div>
+              <div class="card">
+                <div class="card-title">Built-up Area</div>
+                <div class="card-value">${inputs.areaSqFt.toLocaleString('en-IN')} Sq. Ft</div>
+              </div>
+              <div class="card">
+                <div class="card-title">Quality Finish Grade</div>
+                <div class="card-value">${inputs.qualityLevel}</div>
+              </div>
+              <div class="card">
+                <div class="card-title">Location Tier</div>
+                <div class="card-value">${inputs.locationTier}</div>
+              </div>
+              <div class="card">
+                <div class="card-title">Number of Floors</div>
+                <div class="card-value">${inputs.numberOfFloors} Floor(s)</div>
+              </div>
+              <div class="card">
+                <div class="card-title">Contractor Overhead (Included)</div>
+                <div class="card-value">₹${(contractorFee * inputs.areaSqFt).toLocaleString('en-IN')}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Detailed Cost Breakdown</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Allocation %</th>
+                  <th>Estimated Cost (INR)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Architectural Blueprint, Design & Permits</td>
+                  <td>10%</td>
+                  <td>₹${archCost.toLocaleString('en-IN')}</td>
+                </tr>
+                <tr>
+                  <td>Civil Superstructure, Concrete & Excavation Works</td>
+                  <td>48%</td>
+                  <td>₹${civilCost.toLocaleString('en-IN')}</td>
+                </tr>
+                <tr>
+                  <td>Premium Interiors, Wardrobes, Electrical & Lighting</td>
+                  <td>24%</td>
+                  <td>₹${interiorCost.toLocaleString('en-IN')}</td>
+                </tr>
+                <tr>
+                  <td>Finishing Material Package (Teakwood, Double-Glazing, Slate)</td>
+                  <td>18%</td>
+                  <td>₹${materialsCost.toLocaleString('en-IN')}</td>
+                </tr>
+                <tr class="total-row">
+                  <td>Total Estimated Investment</td>
+                  <td>100%</td>
+                  <td>₹${totalCost.toLocaleString('en-IN')}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Execution Estimate</div>
+            <p style="font-size: 13px;">Estimated completion time: <strong>6 - 9 Months</strong> depending on local weather conditions, permit acquisition speed, and contractor labor density.</p>
+          </div>
+
+          <div class="footer">
+            *This report is generated dynamically by the Arch-Connect platform. Final quotes may vary based on exact architectural drafts and supplier bids.
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
@@ -240,16 +382,19 @@ export const CostEstimatorModal: React.FC<CostEstimatorModalProps> = ({
 
         {/* Modal Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between px-6 sm:px-8 py-4 bg-slate-100 border-t border-slate-200 gap-3">
-          <span className="text-xs text-slate-500 font-medium">
-            *Estimates are calculated based on Indian market averages for premium architectural construction.
-          </span>
+          <button
+            onClick={downloadBreakdownPDF}
+            className="w-full sm:w-auto px-5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-full transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+          >
+            <span>📄 Download PDF Breakdown</span>
+          </button>
 
           <button
             onClick={() => {
               onPostRequirementWithEstimate(inputs, totalCost);
               onClose();
             }}
-            className="w-full sm:w-auto px-6 py-3 bg-[#9B7B5A] hover:bg-[#7A5C45] text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2"
+            className="w-full sm:w-auto px-6 py-3 bg-[#9B7B5A] hover:bg-[#7A5C45] text-white font-bold text-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer"
           >
             <span>Request Bids with this Estimate</span>
             <ArrowRight className="w-4 h-4 text-amber-200" />

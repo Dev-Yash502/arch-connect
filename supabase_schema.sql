@@ -31,6 +31,17 @@ create table if not exists professionals (
   phone text,
   email text,
   completed_projects_count int default 0,
+  verification_status text default 'unverified' check (verification_status in ('unverified', 'pending', 'approved', 'rejected')),
+  aadhaar_number text,
+  aadhaar_file_name text,
+  aadhaar_file_url text,
+  pan_number text,
+  pan_file_name text,
+  pan_file_url text,
+  license_type text,
+  license_id text,
+  license_file_name text,
+  license_file_url text,
   owner_id uuid references auth.users(id) on delete set null,
   created_at timestamptz default now()
 );
@@ -146,5 +157,49 @@ create policy "Anyone delete requirements"
 create policy "Anyone delete proposals"
   on proposals for delete
   using (true);
+
+-- 5. Active Projects (Progress Tracker)
+create table if not exists active_projects (
+  id text primary key,
+  name text not null,
+  client_name text,
+  location text,
+  overall_progress numeric default 0,
+  lead_architect text,
+  lead_engineer text,
+  interior_designer text,
+  material_supplier text,
+  estimated_completion text,
+  total_budget numeric,
+  amount_paid numeric default 0,
+  milestones jsonb default '[]'::jsonb,
+  site_photos jsonb default '[]'::jsonb,
+  client_id uuid,
+  professional_id text,
+  created_at timestamptz default now()
+);
+
+alter table active_projects enable row level security;
+create policy "Public read active_projects" on active_projects for select using (true);
+create policy "Anyone insert active_projects" on active_projects for insert with check (true);
+create policy "Anyone update active_projects" on active_projects for update using (true);
+create policy "Anyone delete active_projects" on active_projects for delete using (true);
+
+-- 6. Ratings & Reviews System
+create table if not exists reviews (
+  id text primary key,
+  professional_id text references professionals(id) on delete cascade,
+  client_name text not null,
+  rating numeric check (rating >= 1 and rating <= 5),
+  comment text,
+  project_title text,
+  created_at timestamptz default now()
+);
+
+alter table reviews enable row level security;
+create policy "Public read reviews" on reviews for select using (true);
+create policy "Anyone insert reviews" on reviews for insert with check (true);
+create policy "Anyone update reviews" on reviews for update using (true);
+create policy "Anyone delete reviews" on reviews for delete using (true);
 
 
