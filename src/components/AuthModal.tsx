@@ -59,6 +59,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
           email: email.trim().toLowerCase(),
           password,
           options: {
+            emailRedirectTo: window.location.origin,
             data: {
               name: name.trim(),
               role: role,
@@ -208,6 +209,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
       const { error: resendError } = await supabase.auth.resend({
         type: 'signup',
         email: email.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
       });
       if (resendError) throw resendError;
       setError('✅ A fresh verification link has been sent to your email.');

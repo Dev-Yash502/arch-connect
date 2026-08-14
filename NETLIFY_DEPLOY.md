@@ -23,3 +23,15 @@ Scroll down to the **Environment variables** section and add these two variables
 ## 4. Click Deploy
 Click **Deploy site** and wait 1 minute. Your site is now live!
 Every time you run `git push`, Netlify will automatically rebuild and deploy the updates.
+
+## 5. Supabase Auth Redirect URL Setup (Crucial for Mobile & Email Confirmation)
+When users sign up, Supabase sends an email confirmation link. To make sure the link redirects to your live Netlify website instead of `localhost`:
+
+1. Open your [Supabase Dashboard](https://supabase.com/dashboard).
+2. Go to **Authentication** -> **URL Configuration**.
+3. Set **Site URL** to your Netlify URL:
+   `https://your-app-name.netlify.app`
+4. In **Redirect URLs**, add:
+   - `https://your-app-name.netlify.app/**`
+   - `http://localhost:5173/**` (for local development)
+5. Click **Save**.
