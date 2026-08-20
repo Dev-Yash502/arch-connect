@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   ShieldCheck,
@@ -12,7 +12,8 @@ import {
   UserPlus,
   CheckCircle2,
   Info,
-  Loader2
+  Loader2,
+  Chrome
 } from 'lucide-react';
 import { AuthUser, UserRole } from '../types';
 import { supabase } from '../lib/supabase';
@@ -36,14 +37,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
   const [showOtpScreen, setShowOtpScreen] = useState(false);
   const [otpType, setOtpType] = useState<'signup' | 'email'>('signup');
 
-  if (!isOpen) return null;
-
   const resetForm = () => {
     setEmail('');
     setPassword('');
     setName('');
     setError('');
     setShowOtpScreen(false);
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+
+    try {
+      // OAuth cannot carry arbitrary signup metadata. Keep the user's selected
+      // role locally until Supabase returns them to this browser tab.
+      if (mode === 'signup') {
+        sessionStorage.setItem(
+          'archconnect_google_signup_intent',
+          JSON.stringify({ role, name: name.trim() })
+        );
+      }
+      sessionStorage.setItem('archconnect_google_oauth_pending', 'true');
+
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+
+      if (oauthError) throw oauthError;
+    } catch (err: any) {
+      setError(err.message ?? 'Google login failed. Please try again.');
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -222,6 +250,85 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
     }
   };
 
+  const checkVerificationStatus = async (showSuccessAlert: boolean = false) => {
+    if (!email || !password) return;
+    
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (signInError) {
+        if (showSuccessAlert) {
+          setError('⚠️ Email is still not confirmed. Please check your inbox and click the link.');
+        }
+        return;
+      }
+
+      if (data?.user) {
+        // Fetch profile to get name + role
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('name, role, joined_at')
+          .eq('id', data.user.id)
+          .single();
+
+        let avatar = undefined;
+        if (profile?.role === 'professional') {
+          const { data: prof } = await supabase
+            .from('professionals')
+            .select('avatar')
+            .eq('owner_id', data.user.id)
+            .maybeSingle();
+          if (prof?.avatar) {
+            avatar = prof.avatar;
+          }
+        }
+
+        const authUser: AuthUser = {
+          id: data.user.id,
+          name: profile?.name || name || 'User',
+          email: data.user.email!,
+          role: (profile?.role || role) as UserRole,
+          joinedAt: profile?.joined_at || data.user.created_at,
+          avatar: avatar,
+        };
+
+        setSuccess(true);
+        setTimeout(() => {
+          setSuccess(false);
+          onLogin(authUser);
+          onClose();
+        }, 1200);
+      }
+    } catch (err: any) {
+      console.warn('Verification check failed:', err);
+    }
+  };
+
+  useEffect(() => {
+    let intervalId: any;
+    
+    if (showOtpScreen && email && password) {
+      // Poll every 3 seconds
+      intervalId = setInterval(() => {
+        checkVerificationStatus(false);
+      }, 3000);
+      
+      // Run once immediately
+      checkVerificationStatus(false);
+    }
+    
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [showOtpScreen, email, password]);
+
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
       <div className="relative w-full max-w-md bg-[#FDF8F0] rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
@@ -283,9 +390,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
               </p>
             )}
 
-            <div className="flex items-center justify-center gap-2 text-xs text-slate-400 font-medium py-1">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#9B7B5A]" />
-              <span>Waiting for email confirmation...</span>
+            <div className="space-y-3 py-1">
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-400 font-medium">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#9B7B5A]" />
+                <span>Waiting for email confirmation...</span>
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => checkVerificationStatus(true)}
+                disabled={loading}
+                className="w-full py-2.5 bg-[#9B7B5A] hover:bg-[#4A3728] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <span>I've Verified My Email</span>
+              </button>
             </div>
 
             <div className="flex flex-col items-center gap-3 pt-3 border-t border-slate-200/60">
@@ -460,6 +578,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, 
                   <ArrowRight className="w-4 h-4 text-[#C4A882]" />
                 </>
               )}
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">or</span>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full py-3 bg-white hover:bg-slate-50 disabled:bg-slate-100 text-slate-700 font-bold text-sm rounded-full border border-slate-300 shadow-xs transition-all flex items-center justify-center gap-2"
+            >
+              <Chrome className="w-4 h-4 text-[#4285F4]" />
+              <span>Continue with Google</span>
             </button>
 
             <div className="text-center pt-1">

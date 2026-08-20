@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Header } from './components/Header';
 import { ScrollAnimationHero } from './components/ScrollAnimationHero';
 
@@ -100,6 +101,84 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [pendingRequirement, setPendingRequirement] = useState<any>(null);
 
+  const buildAuthUser = async (user: SupabaseUser): Promise<AuthUser> => {
+    const isGoogleUser = user.app_metadata?.provider === 'google';
+    let googleSignupIntent: { role?: 'client' | 'professional'; name?: string } | null = null;
+
+    if (isGoogleUser) {
+      const savedIntent = sessionStorage.getItem('archconnect_google_signup_intent');
+      if (savedIntent) {
+        try {
+          googleSignupIntent = JSON.parse(savedIntent);
+        } catch {
+          sessionStorage.removeItem('archconnect_google_signup_intent');
+        }
+      }
+    }
+
+    const metadata = user.user_metadata ?? {};
+    const fallbackName =
+      metadata.full_name ||
+      metadata.name ||
+      googleSignupIntent?.name ||
+      user.email?.split('@')[0] ||
+      'User';
+    const intendedRole = googleSignupIntent?.role === 'professional' ? 'professional' : 'client';
+
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('name, role, joined_at')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+
+    let profile = existingProfile;
+    if (!profile) {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user.id,
+          name: fallbackName,
+          role: isGoogleUser ? intendedRole : metadata.role === 'professional' ? 'professional' : 'client',
+        }, { onConflict: 'id' })
+        .select('name, role, joined_at')
+        .single();
+      if (error) throw error;
+      profile = data;
+    } else if (isGoogleUser && googleSignupIntent?.role && profile.role !== intendedRole) {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update({ role: intendedRole })
+        .eq('id', user.id)
+        .select('name, role, joined_at')
+        .single();
+      if (error) throw error;
+      profile = data;
+    }
+
+    sessionStorage.removeItem('archconnect_google_signup_intent');
+
+    let avatar: string | undefined;
+    if (profile.role === 'professional') {
+      const { data: professional } = await supabase
+        .from('professionals')
+        .select('avatar')
+        .eq('owner_id', user.id)
+        .maybeSingle();
+      avatar = professional?.avatar || undefined;
+    }
+
+    return {
+      id: user.id,
+      name: profile.name,
+      email: user.email || '',
+      role: profile.role as AuthUser['role'],
+      joinedAt: profile.joined_at,
+      avatar,
+    };
+  };
+
   // On mount: restore session from Supabase + listen for auth changes
   useEffect(() => {
     // Back button / Popstate history listener
@@ -159,47 +238,16 @@ export default function App() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       try {
         if (session?.user) {
-          let name = session.user.user_metadata?.name || 'User';
-          let role = session.user.user_metadata?.role || 'client';
-          let avatar = undefined;
-          let joinedAt = session.user.created_at;
-
-          try {
-            const { data: profile } = await supabase
-              .from('user_profiles')
-              .select('name, role, joined_at')
-              .eq('id', session.user.id)
-              .single();
-            if (profile) {
-              name = profile.name;
-              role = profile.role;
-              joinedAt = profile.joined_at;
-
-              if (role === 'professional') {
-                const { data: prof } = await supabase
-                  .from('professionals')
-                  .select('avatar')
-                  .eq('owner_id', session.user.id)
-                  .maybeSingle();
-                if (prof?.avatar) {
-                  avatar = prof.avatar;
-                }
-              }
-            }
-          } catch (profileErr) {
-            console.warn("Could not load user profile, falling back to metadata:", profileErr);
-          }
-
-          const authUser = {
-            id: session.user.id,
-            name,
-            email: session.user.email!,
-            role,
-            joinedAt,
-            avatar,
-          };
+          const shouldRedirectAfterGoogleLogin =
+            session.user.app_metadata?.provider === 'google' &&
+            sessionStorage.getItem('archconnect_google_oauth_pending') === 'true';
+          const authUser = await buildAuthUser(session.user);
           setCurrentUser(authUser);
           localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
+          if (shouldRedirectAfterGoogleLogin) {
+            sessionStorage.removeItem('archconnect_google_oauth_pending');
+            setActiveTab(authUser.role === 'professional' ? 'prof-portal' : 'client-portal');
+          }
         }
       } catch (err) {
         console.error("Session restore error:", err);
@@ -220,47 +268,16 @@ export default function App() {
           localStorage.removeItem('admin_session');
           setActiveTab('home');
         } else if (session?.user) {
-          let name = session.user.user_metadata?.name || 'User';
-          let role = session.user.user_metadata?.role || 'client';
-          let avatar = undefined;
-          let joinedAt = session.user.created_at;
-
-          try {
-            const { data: profile } = await supabase
-              .from('user_profiles')
-              .select('name, role, joined_at')
-              .eq('id', session.user.id)
-              .single();
-            if (profile) {
-              name = profile.name;
-              role = profile.role;
-              joinedAt = profile.joined_at;
-
-              if (role === 'professional') {
-                const { data: prof } = await supabase
-                  .from('professionals')
-                  .select('avatar')
-                  .eq('owner_id', session.user.id)
-                  .maybeSingle();
-                if (prof?.avatar) {
-                  avatar = prof.avatar;
-                }
-              }
-            }
-          } catch (profileErr) {
-            console.warn("Could not load user profile on state change, falling back to metadata:", profileErr);
-          }
-
-          const authUser = {
-            id: session.user.id,
-            name,
-            email: session.user.email!,
-            role,
-            joinedAt,
-            avatar,
-          };
+          const shouldRedirectAfterGoogleLogin =
+            session.user.app_metadata?.provider === 'google' &&
+            sessionStorage.getItem('archconnect_google_oauth_pending') === 'true';
+          const authUser = await buildAuthUser(session.user);
           setCurrentUser(authUser);
           localStorage.setItem('archconnect_user_session', JSON.stringify(authUser));
+          if (shouldRedirectAfterGoogleLogin) {
+            sessionStorage.removeItem('archconnect_google_oauth_pending');
+            setActiveTab(authUser.role === 'professional' ? 'prof-portal' : 'client-portal');
+          }
         }
       } catch (err) {
         console.error("Auth state change processing error:", err);
